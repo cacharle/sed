@@ -39,12 +39,18 @@ int main(int argc, char *argv[])
 		}
 	}
 	if (script_string == NULL)
+	{
+		if (argc == optind)
+			die("missing script");
 		script_string = argv[optind];
+	}
 
-	struct addresses addresses;
-	parse_addresses(script_string, &addresses);
+	struct command command;
+	parse_command(script_string, &command);
 
-	printf("%d\n", addresses.count);
+	printf("%d\n", command.addresses.count);
+	printf("%d\n", command.inverse);
+	printf("%s\n", command.text);
 
 	/* script = parse_script(script_string); */
 

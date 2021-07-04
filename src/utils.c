@@ -4,7 +4,7 @@ static void *xmalloc(size_t size)
 {
 	void *ret = malloc(size);
 	if (ret == NULL)
-		exit(1);
+		die("error malloc: %s", strerror(errno));
 	return ret;
 }
 
@@ -12,7 +12,7 @@ static char *xstrdup(const char *s)
 {
 	char *ret = strdup(s);
 	if (ret == NULL)
-		exit(1);
+		die("error strdup: %s", strerror(errno));
 	return ret;
 }
 
@@ -59,11 +59,22 @@ char *read_file(char *filepath)
 	char *ret = NULL;
 	FILE *file = fopen(filepath, "r");
 	if (file == NULL)
-		exit(1);
+		die("couldn't open file %s: %s", filepath, strerror(errno));
 	while (!feof(file))
 	{
 		fread(buf, sizeof(char), READ_FILE_BUF_SIZE, file);
 		ret = strjoinf(ret, buf, NULL);
 	}
 	return ret;
+}
+
+void die(char *fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+	fputs("sed: ", stderr);
+	vfprintf(stderr, fmt, ap);
+	fputc('\n', stderr);
+	va_end(ap);
+	exit(1);
 }

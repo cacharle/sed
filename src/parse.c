@@ -1,6 +1,8 @@
 #include "sed.h"
 
-static const char *available_commands = "ais";
+static const char *available_commands = "ais!";
+
+#define ERRBUF_SIZE 128
 
 char *parse_address(char *s, struct address *address)
 {
@@ -25,11 +27,18 @@ char *parse_address(char *s, struct address *address)
 			memmove(end, end + 1, strlen(end));
 		end++;
 	}
+	if (*end == '\0')
+		die("unterminated address regex '%s'", s);
 	*end = '\0';
 	address->type = ADDRESS_RE;
-	if (regcomp(&address->preg, s, 0) != 0)
-		exit(1);
-	return end;
+	int errcode = regcomp(&address->preg, s + 1, 0);
+	if (errcode != 0)
+	{
+		char errbuf[ERRBUF_SIZE + 1];
+		regerror(errcode, &address->preg, errbuf, ERRBUF_SIZE);
+		die("regex error '%s': %s", s, errbuf);
+	}
+	return end + 1;
 }
 
 char *parse_addresses(char *s, struct addresses *addresses)
@@ -50,10 +59,8 @@ char *parse_addresses(char *s, struct addresses *addresses)
 	return s;
 }
 
-char *parse_append(char *s, struct command *command)
+char *parse_escapable_text(char *s, struct command *command)
 {
-	while (isblank(*s))
-		s++;
 	command->text = s;
 	while (*s != '\0' && *s != '\n')
 	{
@@ -65,13 +72,57 @@ char *parse_append(char *s, struct command *command)
 	return s + 1;
 }
 
-typedef char *(*parse_command_function)(char*, struct command*);
+char *parse_text(char *s, struct command *command)
+{
+	command->text = s;
+	while (*s != '\0' && *s != '\n')
+		s++;
+	*s = '\0';
+	return s + 1;
 
-static parse_command_function parse_command_function_lookup[] = {
-	['a'] = parse_append,
+}
+
+char *parse_list(char *s, struct command *command)
+{
+	return s;
+}
+
+char *parse_dummy(char *s, struct command *)
+{
+	return s;
+}
+
+typedef char *(*command_parse_func)(char*, struct command*);
+
+static command_parse_func command_parse_func_lookup[] = {
+	// TODO use condition
+	['{'] = parse_list,
+	['a'] = parse_escapable_text,
+	['c'] = parse_escapable_text,
+	['i'] = parse_escapable_text,
+	['b'] = parse_text,
+	['t'] = parse_text,
+	['r'] = parse_text,
+	['w'] = parse_text,
+	['d'] = parse_dummy,
+	['D'] = parse_dummy,
+	['g'] = parse_dummy,
+	['G'] = parse_dummy,
+	['h'] = parse_dummy,
+	['H'] = parse_dummy,
+	['l'] = parse_dummy,
+	['n'] = parse_dummy,
+	['N'] = parse_dummy,
+	['p'] = parse_dummy,
+	['P'] = parse_dummy,
+	['q'] = parse_dummy,
+	['x'] = parse_dummy,
+	['='] = parse_dummy,
+	['s'] = NULL,
+	['y'] = NULL,
 };
 
-static char *parse_command(char *s, struct command *command)
+char *parse_command(char *s, struct command *command)
 {
 	s = parse_addresses(s, &command->addresses);
 	command->inverse = *s == '!';
@@ -79,7 +130,9 @@ static char *parse_command(char *s, struct command *command)
 		s++;
 	command->id = *s;
 	s++;
-	return parse_command_function_lookup[command->id](s, command);
+	while (isblank(*s))
+		s++;
+	return command_parse_func_lookup[command->id](s, command);
 }
 
 struct command *parse_script(char *)

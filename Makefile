@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -pedantic
+CFLAGS = --std=c99 -Wall -Wextra -pedantic
 
 SRCDIR = src
 OBJDIR = obj

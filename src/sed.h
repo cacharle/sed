@@ -10,6 +10,7 @@
 # include <stdbool.h>
 # include <stdarg.h>
 # include <regex.h>
+# include <errno.h>
 
 enum address_type
 {
@@ -59,5 +60,6 @@ typedef struct command *script_t;
 // utils.c
 char *strjoinf(char *origin, ...);
 char *read_file(char *filepath);
+void die(char *fmt, ...);
 
 #endif
