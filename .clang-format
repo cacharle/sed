@@ -1,0 +1,93 @@
+---
+# BasedOnStyle: LLVM
+---
+
+Language: Cpp
+
+# PPIndentWidth: 1  # clang-format 13 only
+
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+
+ColumnLimit: 90
+
+DerivePointerAlignment: false
+
+# AlignConsecutiveDeclarations (bool)
+# If true, aligns consecutive declarations.
+AlignConsecutiveDeclarations: Consecutive
+AlignConsecutiveAssignments: Consecutive
+AlignConsecutiveBitFields: Consecutive
+# AlignArrayOfStructures: Left  # clang-format 13 only
+AlignEscapedNewlines: Left
+AlignTrailingComments: true
+
+AlwaysBreakAfterDefinitionReturnType: All
+AlwaysBreakAfterReturnType: All
+
+# SpaceBeforeParens (SpaceBeforeParensOptions)
+# Defines in which cases to put a space before opening parentheses.
+# SBPO_ControlStatements (in configuration: ControlStatements) Put a space before opening parentheses only after control statement keywords (for/if/while...).
+SpaceBeforeParens: ControlStatements
+
+
+AllowShortFunctionsOnASingleLine: None
+AllowShortBlocksOnASingleLine: Never
+AllowShortIfStatementsOnASingleLine: Never
+
+AlwaysBreakBeforeMultilineStrings: false
+
+BinPackArguments: true
+BinPackParameters: true
+
+# BreakBeforeBraces (BraceBreakingStyle)
+# The brace breaking style to use.
+# BS_Allman (in configuration: Allman) Always break before braces.
+BreakBeforeBraces: Allman
+
+# BreakBeforeTernaryOperators (bool)
+# If true, ternary operators will be placed after line breaks.
+BreakBeforeTernaryOperators: true
+
+IncludeBlocks: Merge
+
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+
+
+PointerAlignment: Right
+
+
+# PenaltyBreakBeforeFirstCallParameter (unsigned)
+# The penalty for breaking a function call after call(.
+PenaltyBreakBeforeFirstCallParameter: 1
+
+
+# PenaltyBreakString (unsigned)
+# The penalty for each line break introduced inside a string literal.
+PenaltyBreakString: 1
+
+
+# PenaltyExcessCharacter (unsigned)
+# The penalty for each character outside of the column limit.
+PenaltyExcessCharacter: 10
+
+PenaltyReturnTypeOnItsOwnLine: 100
+
+SpaceAfterCStyleCast: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyParentheses: false
+SpacesInCStyleCastParentheses: false
+SpacesInParentheses: false
+SpacesBeforeTrailingComments: 2
+SpacesInSquareBrackets: false
+SpaceAroundPointerQualifiers: Default
+
+AlignOperands: false
+
+Cpp11BracedListStyle: true
+
+
+# vim:ft=yaml
