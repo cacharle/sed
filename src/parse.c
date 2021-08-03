@@ -56,9 +56,11 @@ parse_addresses(char *s, struct addresses *addresses)
     addresses->count++;
     if (*s != ',')
         return s;
+    s++;
     end = parse_address(s, &addresses->addresses[1]);
     if (s == end)
         return s;
+    s = end;
     addresses->count++;
     return s;
 }

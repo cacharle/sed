@@ -68,5 +68,7 @@ die(char *fmt, ...);
 // parse.c
 char *
 parse_address(char *s, struct address *address);
+char *
+parse_addresses(char *s, struct addresses *addresses);
 
 #endif
