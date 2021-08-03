@@ -37,6 +37,8 @@ struct addresses
 
 typedef void (*command_function)(void);
 
+#define COMMAND_LAST '\0'
+
 struct command
 {
     char             id;
@@ -50,13 +52,26 @@ struct command
         {
             regex_t preg;
             char *  dest;
+            char *  write_filepath;
+            bool    global;
+            bool    print;
+            size_t  occurence_index;
         } substitute;
+        struct
+        {
+            char *from;
+            char *to;
+        } translate;
     } data;
 };
 
 typedef struct command *script_t;
 
 // utils.c
+void *
+xmalloc(size_t size);
+void *
+xrealloc(void *ptr, size_t size);
 char *
 strjoinf(char *origin, ...);
 char *

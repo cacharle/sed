@@ -65,12 +65,35 @@ parse_addresses(char *s, struct addresses *addresses)
     return s;
 }
 
+static char *
+parse_singleton(char *s, struct command *command)
+{
+    (void)command;
+    return s;
+}
+
+static char *
+parse_text(char *s, struct command *command)
+{
+    command->data.text = s;
+    while (*s != '\0' && *s != '\n')
+        s++;
+    *s = '\0';
+    if ((command->id == 'r' || command->id == 'w') && *command->data.text == '\0')
+        die("missing filename in r/w commands");
+    return s + 1;
+}
+
 static const char *available_escape = "tnrvf";
 static const char  escape_lookup[]  = {
-    ['t'] = '\t', ['n'] = '\n', ['r'] = '\r', ['v'] = '\v', ['f'] = '\f',
+    ['t'] = '\t',
+    ['n'] = '\n',
+    ['r'] = '\r',
+    ['v'] = '\v',
+    ['f'] = '\f',
 };
 
-char *
+static char *
 parse_escapable_text(char *s, struct command *command)
 {
     if (*s != '\\')
@@ -93,30 +116,46 @@ parse_escapable_text(char *s, struct command *command)
     return s + 1;
 }
 
-char *
-parse_text(char *s, struct command *command)
+static const size_t commands_realloc_size = 10;
+
+static char *
+parse_commands(char *s, struct command **commands, char end_delim)
 {
-    command->data.text = s;
-    while (*s != '\0' && *s != '\n' && *s != ';')
-        s++;
-    *s = '\0';
-    if ((command->id == 'r' || command->id == 'w') && *command->data.text == '\0')
-        die("missing filename in r/w commands");
+    *commands = xmalloc(sizeof(struct command) * commands_realloc_size);
+    char * saved;
+    size_t i = 0;
+    for (i = 0; true; i++)
+    {
+        s     = parse_command(s, &(*commands)[i]);
+        saved = &s[-1];  // weird hack for parse*_text where the parser puts a null
+                         // character in place of the separator to split the string
+        while (isspace(*s))
+            s++;
+        if (*s == end_delim || *s == '\0')
+            break;
+        if (*s == ';' || *s == '\n' || *saved == '\0')
+        {
+            if (*s == ';' || *s == '\n')
+                s++;
+        }
+        else
+            die("extra characters after command");
+        if ((i + 1) % commands_realloc_size == 0)
+        {
+            size_t slots = (i / commands_realloc_size) + 1;
+            *commands    = xrealloc(
+                *commands, sizeof(struct command) * (slots * commands_realloc_size));
+        }
+    }
+    *commands             = xrealloc(*commands, sizeof(struct command) * (i + 2));
+    (*commands)[i + 1].id = COMMAND_LAST;
     return s + 1;
 }
 
-char *
+static char *
 parse_list(char *s, struct command *command)
 {
-    (void)command;
-    return s;
-}
-
-char *
-parse_singleton(char *s, struct command *command)
-{
-    (void)command;
-    return s;
+    return parse_commands(s, &command->data.children, '}');
 }
 
 struct command_info
@@ -166,7 +205,8 @@ parse_command(char *s, struct command *command)
         die("unknown command: '%c'", command->id);
     const struct command_info *command_info = &command_info_lookup[(size_t)command->id];
     if (command->addresses.count > command_info->addresses_max)
-        die("too much addresses: '%c' accepts maximum %zu address", command->id,
+        die("too much addresses: '%c' accepts maximum %zu address",
+            command->id,
             command_info->addresses_max);
     s++;
     while (isblank(*s))
@@ -175,8 +215,9 @@ parse_command(char *s, struct command *command)
 }
 
 struct command *
-parse_script(char *s)
+parse(char *s)
 {
-    (void)s;
-    return NULL;
+    struct command *commands = NULL;
+    (void)parse_commands(s, &commands, '\0');
+    return commands;
 }

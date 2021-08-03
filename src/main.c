@@ -14,8 +14,9 @@ command_function command_functions_lookup[] = {
     ['i'] = function_insert,
 };
 
-#define CHAR_SPACE_MAX 8192
-// need under buffer for implementation of the 'x' command (can't swap array aka constant pointers)
+#define CHAR_SPACE_MAX 20480
+// need under buffer for implementation of the 'x' command (can't swap array aka constant
+// pointers)
 static char  pattern_space_under[CHAR_SPACE_MAX + 1] = {'\0'};
 static char  hold_space_under[CHAR_SPACE_MAX + 1]    = {'\0'};
 static char *pattern_space                           = pattern_space_under;

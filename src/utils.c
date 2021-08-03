@@ -1,11 +1,20 @@
 #include "sed.h"
 
-static void *
+void *
 xmalloc(size_t size)
 {
     void *ret = malloc(size);
     if (ret == NULL)
         die("error malloc: %s", strerror(errno));
+    return ret;
+}
+
+void *
+xrealloc(void *ptr, size_t size)
+{
+    void *ret = realloc(ptr, size);
+    if (ret == NULL)
+        die("error realloc: %s", strerror(errno));
     return ret;
 }
 

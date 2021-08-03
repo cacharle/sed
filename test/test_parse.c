@@ -254,3 +254,61 @@ Test(parse_command, addresses_max_2_quit, .exit_code = 1)
 {
     parse_command("1,10q", &command);
 }
+
+Test(parse_command, list)
+{
+    rest = parse_command("{p}", &command);
+    cr_assert_str_empty(rest);
+    cr_assert_eq(command.id, '{');
+    cr_assert_eq(command.data.children[0].id, 'p');
+    cr_assert_eq(command.data.children[1].id, COMMAND_LAST);
+    free(command.data.children);
+
+    rest = parse_command("{p;p;p;p;p;p;p;p;p;p}", &command);
+    cr_assert_str_empty(rest);
+    cr_assert_eq(command.id, '{');
+    for (size_t i = 0; i < 10; i++)
+        cr_assert_eq(command.data.children[i].id, 'p');
+    cr_assert_eq(command.data.children[10].id, COMMAND_LAST);
+    free(command.data.children);
+
+    rest = parse_command("{10q}", &command);
+    cr_assert_str_empty(rest);
+    cr_assert_eq(command.id, '{');
+    cr_assert_eq(command.data.children[0].id, 'q');
+    cr_assert_eq(command.data.children[0].addresses.count, 1);
+    cr_assert_eq(command.data.children[0].addresses.addresses[0].type, ADDRESS_LINE);
+    cr_assert_eq(command.data.children[0].addresses.addresses[0].data.line, 10);
+    cr_assert_eq(command.data.children[1].id, COMMAND_LAST);
+    free(command.data.children);
+
+    rest = parse_command("{10,20p}", &command);
+    cr_assert_str_empty(rest);
+    cr_assert_eq(command.id, '{');
+    cr_assert_eq(command.data.children[0].id, 'p');
+    cr_assert_eq(command.data.children[0].addresses.count, 2);
+    cr_assert_eq(command.data.children[0].addresses.addresses[0].type, ADDRESS_LINE);
+    cr_assert_eq(command.data.children[0].addresses.addresses[0].data.line, 10);
+    cr_assert_eq(command.data.children[0].addresses.addresses[1].type, ADDRESS_LINE);
+    cr_assert_eq(command.data.children[0].addresses.addresses[1].data.line, 20);
+    cr_assert_eq(command.data.children[1].id, COMMAND_LAST);
+    free(command.data.children);
+
+    rest = parse_command(strcpy(input, "{rfoo\nwbar\n}"), &command);
+    cr_assert_str_empty(rest);
+    cr_assert_eq(command.id, '{');
+    cr_assert_eq(command.data.children[0].id, 'r');
+    cr_assert_str_eq(command.data.children[0].data.text, "foo");
+    cr_assert_eq(command.data.children[1].id, 'w');
+    cr_assert_str_eq(command.data.children[1].data.text, "bar");
+    cr_assert_eq(command.data.children[2].id, COMMAND_LAST);
+    free(command.data.children);
+
+    rest = parse_command(strcpy(input, "{a\\ bonjour\n}"), &command);
+    cr_assert_str_empty(rest);
+    cr_assert_eq(command.id, '{');
+    cr_assert_eq(command.data.children[0].id, 'a');
+    cr_assert_str_eq(command.data.children[0].data.text, "bonjour");
+    cr_assert_eq(command.data.children[1].id, COMMAND_LAST);
+    free(command.data.children);
+}
