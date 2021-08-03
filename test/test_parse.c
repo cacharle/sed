@@ -229,3 +229,28 @@ Test(parse_command, escapable_text_escape)
     cr_assert_eq(command.id, 'a');
     cr_assert_str_eq(command.data.text, "foo\t\nbaz\r\v\fbar");
 }
+
+Test(parse_command, addresses_max_1_comment, .exit_code = 1)
+{
+    parse_command("1#bonjour", &command);
+}
+
+Test(parse_command, addresses_max_2_comment, .exit_code = 1)
+{
+    parse_command("1,10#bonjour", &command);
+}
+
+Test(parse_command, addresses_max_1_label, .exit_code = 1)
+{
+    parse_command("1:bonjour", &command);
+}
+
+Test(parse_command, addresses_max_2_label, .exit_code = 1)
+{
+    parse_command("1,10:bonjour", &command);
+}
+
+Test(parse_command, addresses_max_2_quit, .exit_code = 1)
+{
+    parse_command("1,10q", &command);
+}

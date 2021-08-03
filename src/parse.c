@@ -119,35 +119,39 @@ parse_singleton(char *s, struct command *command)
     return s;
 }
 
-typedef char *(*t_command_parse_func)(char *, struct command *);
+struct command_info
+{
+    char *(*func)(char *, struct command *);
+    size_t addresses_max;
+};
 
-static t_command_parse_func command_parse_func_lookup[] = {
-    ['{'] = parse_list,
-    ['a'] = parse_escapable_text,
-    ['c'] = parse_escapable_text,
-    ['i'] = parse_escapable_text,
-    [':'] = parse_text,
-    ['b'] = parse_text,
-    ['t'] = parse_text,
-    ['r'] = parse_text,
-    ['w'] = parse_text,
-    ['d'] = parse_singleton,
-    ['D'] = parse_singleton,
-    ['g'] = parse_singleton,
-    ['G'] = parse_singleton,
-    ['h'] = parse_singleton,
-    ['H'] = parse_singleton,
-    ['l'] = parse_singleton,
-    ['n'] = parse_singleton,
-    ['N'] = parse_singleton,
-    ['p'] = parse_singleton,
-    ['P'] = parse_singleton,
-    ['q'] = parse_singleton,
-    ['x'] = parse_singleton,
-    ['='] = parse_singleton,
-    ['#'] = parse_singleton,
-    ['s'] = NULL,
-    ['y'] = NULL,
+static const struct command_info command_info_lookup[] = {
+    ['{'] = {parse_list, 2},
+    ['a'] = {parse_escapable_text, 2},
+    ['c'] = {parse_escapable_text, 2},
+    ['i'] = {parse_escapable_text, 2},
+    [':'] = {parse_text, 0},
+    ['b'] = {parse_text, 2},
+    ['t'] = {parse_text, 2},
+    ['r'] = {parse_text, 2},
+    ['w'] = {parse_text, 2},
+    ['d'] = {parse_singleton, 2},
+    ['D'] = {parse_singleton, 2},
+    ['g'] = {parse_singleton, 2},
+    ['G'] = {parse_singleton, 2},
+    ['h'] = {parse_singleton, 2},
+    ['H'] = {parse_singleton, 2},
+    ['l'] = {parse_singleton, 2},
+    ['n'] = {parse_singleton, 2},
+    ['N'] = {parse_singleton, 2},
+    ['p'] = {parse_singleton, 2},
+    ['P'] = {parse_singleton, 2},
+    ['q'] = {parse_singleton, 1},
+    ['x'] = {parse_singleton, 2},
+    ['='] = {parse_singleton, 2},
+    ['#'] = {parse_singleton, 0},
+    ['s'] = {NULL, 2},
+    ['y'] = {NULL, 2},
 };
 
 char *
@@ -160,10 +164,14 @@ parse_command(char *s, struct command *command)
     command->id = *s;
     if (strchr(available_commands, command->id) == NULL)
         die("unknown command: '%c'", command->id);
+    const struct command_info *command_info = &command_info_lookup[(size_t)command->id];
+    if (command->addresses.count > command_info->addresses_max)
+        die("too much addresses: '%c' accepts maximum %zu address", command->id,
+            command_info->addresses_max);
     s++;
     while (isblank(*s))
         s++;
-    return command_parse_func_lookup[(size_t)command->id](s, command);
+    return command_info->func(s, command);
 }
 
 struct command *
