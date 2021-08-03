@@ -1,13 +1,13 @@
 #include "sed.h"
 
-static const char *available_commands = "ais!";
+static const char *available_commands = "{aci:btrwdDgGhHlnNpPqx=#sy";
 
 #define ERRBUF_SIZE 128
 
 char *
 parse_address(char *s, struct address *address)
 {
-    if (strchr(available_commands, s[0]) != NULL)
+    if (s[0] == '!' || strchr(available_commands, s[0]) != NULL)
         return s;
     if (s[0] == '$')
     {
@@ -65,14 +65,28 @@ parse_addresses(char *s, struct addresses *addresses)
     return s;
 }
 
+static const char *available_escape = "tnrvf";
+static const char  escape_lookup[]  = {
+    ['t'] = '\t', ['n'] = '\n', ['r'] = '\r', ['v'] = '\v', ['f'] = '\f',
+};
+
 char *
 parse_escapable_text(char *s, struct command *command)
 {
+    if (*s != '\\')
+        die("expected '\\' after a/c/i commands");
+    s++;
+    while (isspace(*s))
+        s++;
     command->data.text = s;
     while (*s != '\0' && *s != '\n')
     {
-        if (*s == '\\' && *s != '\0')
-            s++;
+        if (s[0] == '\\' && s[1] != '\0')
+        {
+            if (strchr(available_escape, s[1]) != NULL)
+                s[1] = escape_lookup[(size_t)s[1]];
+            memmove(s, s + 1, strlen(s));
+        }
         s++;
     }
     *s = '\0';
@@ -83,50 +97,55 @@ char *
 parse_text(char *s, struct command *command)
 {
     command->data.text = s;
-    while (*s != '\0' && *s != '\n')
+    while (*s != '\0' && *s != '\n' && *s != ';')
         s++;
     *s = '\0';
+    if ((command->id == 'r' || command->id == 'w') && *command->data.text == '\0')
+        die("missing filename in r/w commands");
     return s + 1;
 }
 
 char *
 parse_list(char *s, struct command *command)
 {
+    (void)command;
     return s;
 }
 
 char *
-parse_dummy(char *s, struct command *)
+parse_singleton(char *s, struct command *command)
 {
+    (void)command;
     return s;
 }
 
-typedef char *(*command_parse_func)(char *, struct command *);
+typedef char *(*t_command_parse_func)(char *, struct command *);
 
-static command_parse_func command_parse_func_lookup[] = {
-    // TODO use condition
+static t_command_parse_func command_parse_func_lookup[] = {
     ['{'] = parse_list,
     ['a'] = parse_escapable_text,
     ['c'] = parse_escapable_text,
     ['i'] = parse_escapable_text,
+    [':'] = parse_text,
     ['b'] = parse_text,
     ['t'] = parse_text,
     ['r'] = parse_text,
     ['w'] = parse_text,
-    ['d'] = parse_dummy,
-    ['D'] = parse_dummy,
-    ['g'] = parse_dummy,
-    ['G'] = parse_dummy,
-    ['h'] = parse_dummy,
-    ['H'] = parse_dummy,
-    ['l'] = parse_dummy,
-    ['n'] = parse_dummy,
-    ['N'] = parse_dummy,
-    ['p'] = parse_dummy,
-    ['P'] = parse_dummy,
-    ['q'] = parse_dummy,
-    ['x'] = parse_dummy,
-    ['='] = parse_dummy,
+    ['d'] = parse_singleton,
+    ['D'] = parse_singleton,
+    ['g'] = parse_singleton,
+    ['G'] = parse_singleton,
+    ['h'] = parse_singleton,
+    ['H'] = parse_singleton,
+    ['l'] = parse_singleton,
+    ['n'] = parse_singleton,
+    ['N'] = parse_singleton,
+    ['p'] = parse_singleton,
+    ['P'] = parse_singleton,
+    ['q'] = parse_singleton,
+    ['x'] = parse_singleton,
+    ['='] = parse_singleton,
+    ['#'] = parse_singleton,
     ['s'] = NULL,
     ['y'] = NULL,
 };
@@ -135,10 +154,12 @@ char *
 parse_command(char *s, struct command *command)
 {
     s                = parse_addresses(s, &command->addresses);
-    command->inverse = *s == '!';
+    command->inverse = (*s == '!');
     if (*s == '!')
         s++;
     command->id = *s;
+    if (strchr(available_commands, command->id) == NULL)
+        die("unknown command: '%c'", command->id);
     s++;
     while (isblank(*s))
         s++;
@@ -146,7 +167,8 @@ parse_command(char *s, struct command *command)
 }
 
 struct command *
-parse_script(char *)
+parse_script(char *s)
 {
+    (void)s;
     return NULL;
 }

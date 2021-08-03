@@ -3,6 +3,7 @@
 
 static struct address   address;
 static struct addresses addresses;
+static struct command   command;
 static char *           rest;
 static char             input[64];
 
@@ -149,4 +150,82 @@ Test(parse_addresses, output)
     cr_assert_str_eq("foo", parse_addresses(strcpy(input, "/abc*/foo"), &addresses));
     cr_assert_str_eq("foo",
                      parse_addresses(strcpy(input, "/abc*/,|.*cba|foo"), &addresses));
+}
+
+Test(parse_command, inverse)
+{
+    rest = parse_command("!p", &command);
+    cr_assert_str_empty(rest);
+    cr_assert_eq(command.id, 'p');
+    cr_assert(command.inverse);
+}
+
+Test(parse_command, singleton)
+{
+    const char *singleton_commands = "dDgGhHlnNpPqx=#";
+    for (size_t i = 0; singleton_commands[i] != '\0'; i++)
+    {
+        input[0] = singleton_commands[i];
+        input[1] = '\0';
+        rest     = parse_command(input, &command);
+        cr_assert_str_empty(rest);
+        cr_assert_eq(command.id, singleton_commands[i]);
+    }
+}
+
+Test(parse_command, text)
+{
+    const char *text_commands = ":btrw";
+    for (size_t i = 0; text_commands[i] != '\0'; i++)
+    {
+        input[0] = text_commands[i];
+        strcpy(input + 1, "bonjour");
+        rest = parse_command(input, &command);
+        cr_assert_str_empty(rest);
+        cr_assert_eq(command.id, text_commands[i]);
+        cr_assert_str_eq(command.data.text, "bonjour");
+    }
+}
+
+Test(parse_command, error_read_no_filepath, .exit_code = 1)
+{
+    parse_command(strcpy(input, "r"), &command);
+}
+
+Test(parse_command, error_write_no_filepath, .exit_code = 1)
+{
+    parse_command(strcpy(input, "w"), &command);
+}
+
+Test(parse_command, branch_no_filepath, .exit_code = 0)
+{
+    parse_command(strcpy(input, "t"), &command);
+    parse_command(strcpy(input, "b"), &command);
+}
+
+Test(parse_command, escapable_text)
+{
+    const char *text_commands = "aci";
+    for (size_t i = 0; text_commands[i] != '\0'; i++)
+    {
+        input[0] = text_commands[i];
+        strcpy(input + 1, "\\bonjour");
+        rest = parse_command(input, &command);
+        cr_assert_str_empty(rest);
+        cr_assert_eq(command.id, text_commands[i]);
+        cr_assert_str_eq(command.data.text, "bonjour");
+    }
+}
+
+Test(parse_command, escapable_text_escape)
+{
+    rest = parse_command(strcpy(input, "a\\\\b\\on\\j\\o\\ur"), &command);
+    cr_assert_str_empty(rest);
+    cr_assert_eq(command.id, 'a');
+    cr_assert_str_eq(command.data.text, "bonjour");
+
+    rest = parse_command(strcpy(input, "a\\foo\\t\\nbaz\\r\\v\\fbar"), &command);
+    cr_assert_str_empty(rest);
+    cr_assert_eq(command.id, 'a');
+    cr_assert_str_eq(command.data.text, "foo\t\nbaz\r\v\fbar");
 }

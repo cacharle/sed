@@ -56,7 +56,7 @@ main(int argc, char *argv[])
 
     printf("%d\n", command.addresses.count);
     printf("%d\n", command.inverse);
-    printf("%s\n", command.text);
+    printf("%s\n", command.data.text);
 
     /* script = parse_script(script_string); */
 

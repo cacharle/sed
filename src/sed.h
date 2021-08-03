@@ -45,7 +45,6 @@ struct command
     union
     {
         char *          text;
-        char *          filepath;
         struct command *children;
         struct
         {
@@ -70,5 +69,7 @@ char *
 parse_address(char *s, struct address *address);
 char *
 parse_addresses(char *s, struct addresses *addresses);
+char *
+parse_command(char *s, struct command *command);
 
 #endif
