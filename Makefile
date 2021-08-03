@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = --std=c99 -Wall -Wextra -pedantic
+CCFLAGS = --std=c99 -Wall -Wextra -pedantic
 
 SRCDIR  = src
 OBJDIR  = obj
@@ -32,7 +32,9 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c $(INCLUDE)
 	$(CC) $(CCFLAGS) -c $< -o $@
 
 test: $(TEST_NAME)
-	./$(TEST_NAME)
+
+test_run: test
+	./$(TEST_NAME) --verbose -j1
 
 $(TEST_NAME): $(OBJDIR) $(TEST_OBJDIR) $(TEST_OBJ)
 	$(CC) -lcriterion $(TEST_OBJ) -o $@
