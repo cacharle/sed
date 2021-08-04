@@ -39,16 +39,14 @@ Test(parse_address, line_error, .exit_code = 1)
 
 Test(parse_address, re)
 {
-    strcpy(input, "/abc*/");
-    rest = parse_address(input, &address);
+    rest = parse_address(strcpy(input, "/abc*/"), &address);
     cr_expect_str_empty(rest);
     cr_expect_eq(address.type, ADDRESS_RE);
     cr_expect_eq(regexec(&address.data.preg, "abc", 0, NULL, 0), 0);
     cr_expect_eq(regexec(&address.data.preg, "abcccc", 0, NULL, 0), 0);
     cr_expect_eq(regexec(&address.data.preg, "bccc", 0, NULL, 0), REG_NOMATCH);
 
-    strcpy(input, "|abc*|");
-    rest = parse_address(input, &address);
+    rest = parse_address(strcpy(input, "|abc*|"), &address);
     cr_expect_str_empty(rest);
     cr_expect_eq(address.type, ADDRESS_RE);
     cr_expect_eq(regexec(&address.data.preg, "abc", 0, NULL, 0), 0);
@@ -58,8 +56,7 @@ Test(parse_address, re)
 
 Test(parse_address, re_escape)
 {
-    strcpy(input, "/a\\/bc*/");
-    rest = parse_address(input, &address);
+    rest = parse_address(strcpy(input, "/a\\/bc*/"), &address);
     cr_expect_str_empty(rest);
     cr_expect_eq(address.type, ADDRESS_RE);
     cr_expect_eq(regexec(&address.data.preg, "a/bc", 0, NULL, 0), 0);
@@ -69,20 +66,22 @@ Test(parse_address, re_escape)
 
 Test(parse_address, re_error, .exit_code = 1)
 {
-    strcpy(input, "/abc*");
-    parse_address(input, &address);
+    parse_address(strcpy(input, "/abc*"), &address);
 }
 
 Test(parse_address, re_escape_error, .exit_code = 1)
 {
-    strcpy(input, "/a\\/bc*");
-    parse_address(input, &address);
+    parse_address(strcpy(input, "/a\\/bc*"), &address);
 }
 
 Test(parse_address, re_regex_error, .exit_code = 1)
 {
-    strcpy(input, "/ab[c/");
-    parse_address(input, &address);
+    parse_address(strcpy(input, "/ab[c/"), &address);
+}
+
+Test(parse_address, re_backslash_delimiter_error, .exit_code = 1)
+{
+    parse_address(strcpy(input, "\\abc\\"), &address);
 }
 
 Test(parse_address, output)
@@ -167,7 +166,7 @@ Test(parse_command, singleton)
     {
         input[0] = singleton_commands[i];
         input[1] = '\0';
-        rest     = parse_command(input, &command);
+        rest = parse_command(input, &command);
         cr_expect_str_empty(rest);
         cr_expect_eq(command.id, singleton_commands[i]);
     }
@@ -376,19 +375,19 @@ Test(parse_command, list)
     cr_expect_eq(command.data.children[2].data.children[3].id, '}');
     cr_expect_eq(command.data.children[3].id, '}');
 
-	const size_t len = 2048;
-	const size_t buf_size = len * 2 + 2;
-	char buf[buf_size + 1];
-	memset(buf, buf_size + 1, '\0');
-	buf[0] = '{';
-	size_t i;
-	for (i = 1; i < buf_size - 1;)
-	{
-		buf[i++] = 'p';
-		buf[i++] = ';';
-	}
-	buf[i - 1] = '}';
-	buf[i] = '\0';
+    const size_t len = 2048;
+    const size_t buf_size = len * 2 + 2;
+    char         buf[buf_size + 1];
+    memset(buf, '\0', buf_size + 1);
+    buf[0] = '{';
+    size_t i;
+    for (i = 1; i < buf_size - 1;)
+    {
+        buf[i++] = 'p';
+        buf[i++] = ';';
+    }
+    buf[i - 1] = '}';
+    buf[i] = '\0';
     rest = parse_command(buf, &command);
     cr_expect_str_empty(rest);
     cr_expect_eq(command.id, '{');
@@ -411,4 +410,41 @@ Test(parse_command, error_list_unmatched, .exit_code = 1)
 Test(parse_command, error_list_unmatched_nested, .exit_code = 1)
 {
     parse_command("{;p;p;{p;p;p};p;p", &command);
+}
+
+Test(parse_command, translate)
+{
+    rest = parse_command(strcpy(input, "y/abc/def/"), &command);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, 'y');
+    cr_expect_str_eq(command.data.translate.from, "abc");
+    cr_expect_str_eq(command.data.translate.to, "def");
+
+    rest = parse_command(strcpy(input, "y/\\/\\a\\b\\c/\\d\\ef\\//"), &command);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, 'y');
+    cr_expect_str_eq(command.data.translate.from, "/abc");
+    cr_expect_str_eq(command.data.translate.to, "def/");
+
+    rest = parse_command(strcpy(input, "y/\\t\\n\\r\\v\\f/\\f\\v\\r\\n\\t/"), &command);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, 'y');
+    cr_expect_str_eq(command.data.translate.from, "\t\n\r\v\f");
+    cr_expect_str_eq(command.data.translate.to, "\f\v\r\n\t");
+
+    rest = parse_command(strcpy(input, "y|\\|abc|def\\||"), &command);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, 'y');
+    cr_expect_str_eq(command.data.translate.from, "|abc");
+    cr_expect_str_eq(command.data.translate.to, "def|");
+}
+
+Test(parse_command, translate_error_from_smaller, .exit_code = 1)
+{
+    rest = parse_command(strcpy(input, "y/abc/defg/"), &command);
+}
+
+Test(parse_command, translate_error_to_smaller, .exit_code = 1)
+{
+    rest = parse_command(strcpy(input, "y/abcd/efg/"), &command);
 }

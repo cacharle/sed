@@ -21,8 +21,8 @@ Test(strjoinf, base)
 Test(read_file, base)
 {
     char template[] = "/tmp/sed_testXXXXXX";  // modified by mkstemp
-    FILE *tmp_file  = fdopen(mkstemp(template), "w+");
-    char *expected  = "bonjour je suis charles";
+    FILE *tmp_file = fdopen(mkstemp(template), "w+");
+    char *expected = "bonjour je suis charles";
     fputs(expected, tmp_file);
     fclose(tmp_file);
     char *actual = read_file(template);

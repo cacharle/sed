@@ -16,7 +16,7 @@ DerivePointerAlignment: false
 PointerAlignment: Right
 
 AlignConsecutiveDeclarations: Consecutive
-AlignConsecutiveAssignments: Consecutive
+AlignConsecutiveAssignments: None
 AlignConsecutiveBitFields: Consecutive
 # AlignArrayOfStructures: Left  # clang-format 13 only
 AlignEscapedNewlines: Left

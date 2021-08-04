@@ -69,8 +69,8 @@ char *
 read_file(char *filepath)
 {
     char  buf[READ_FILE_BUF_SIZE + 1] = {'\0'};
-    char *ret                         = NULL;
-    FILE *file                        = fopen(filepath, "r");
+    char *ret = NULL;
+    FILE *file = fopen(filepath, "r");
     if (file == NULL)
         die("couldn't open file %s: %s", filepath, strerror(errno));
     while (!feof(file))
