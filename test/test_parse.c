@@ -147,8 +147,8 @@ Test(parse_addresses, output)
     cr_expect_str_eq("foo", parse_addresses("10foo", &addresses));
     cr_expect_str_eq("foo", parse_addresses("10,400foo", &addresses));
     cr_expect_str_eq("foo", parse_addresses(strcpy(input, "/abc*/foo"), &addresses));
-    cr_expect_str_eq("foo",
-                     parse_addresses(strcpy(input, "/abc*/,|.*cba|foo"), &addresses));
+    cr_expect_str_eq(
+        "foo", parse_addresses(strcpy(input, "/abc*/,|.*cba|foo"), &addresses));
 }
 
 Test(parse_command, inverse)
@@ -327,26 +327,26 @@ Test(parse_command, list)
     cr_expect_eq(command.data.children[0].id, '}');
     free(command.data.children);
 
-    rest = parse_command(strcpy(input, "{;;;;;;;;;;;;;;}"), &command);
+    rest = parse_command(strcpy(input, "{;;;;; ;;;;;;;;;}"), &command);
     cr_expect_str_empty(rest);
     cr_expect_eq(command.id, '{');
     cr_expect_eq(command.data.children[0].id, '}');
     free(command.data.children);
 
-    rest = parse_command(strcpy(input, "{;;;;;;;p;;;;;;;}"), &command);
+    rest = parse_command(strcpy(input, "{;;; ;;;;p;;;;;; ;}"), &command);
     cr_expect_str_empty(rest);
     cr_expect_eq(command.id, '{');
     cr_expect_eq(command.data.children[0].id, 'p');
     cr_expect_eq(command.data.children[1].id, '}');
     free(command.data.children);
 
-    rest = parse_command(strcpy(input, "{\n\n\n\n\n\n\n\n\n\n}"), &command);
+    rest = parse_command(strcpy(input, "{\n\n\n\n\n\n\n \n\n\n}"), &command);
     cr_expect_str_empty(rest);
     cr_expect_eq(command.id, '{');
     cr_expect_eq(command.data.children[0].id, '}');
     free(command.data.children);
 
-    rest = parse_command(strcpy(input, "{\n\n\n\n\np\n\n\n\n\n\n}"), &command);
+    rest = parse_command(strcpy(input, "{\n\n\n \n\np\n\n\n\n\n\n}"), &command);
     cr_expect_str_empty(rest);
     cr_expect_eq(command.id, '{');
     cr_expect_eq(command.data.children[0].id, 'p');
@@ -436,7 +436,8 @@ Test(parse_command, translate)
     cr_expect_str_eq(command.data.translate.from, "/abc");
     cr_expect_str_eq(command.data.translate.to, "def/");
 
-    rest = parse_command(strcpy(input, "y/\\t\\n\\r\\v\\f/\\f\\v\\r\\n\\t/"), &command);
+    rest =
+        parse_command(strcpy(input, "y/\\t\\n\\r\\v\\f/\\f\\v\\r\\n\\t/"), &command);
     cr_expect_str_empty(rest);
     cr_expect_eq(command.id, 'y');
     cr_expect_str_eq(command.data.translate.from, "\t\n\r\v\f");
@@ -467,10 +468,11 @@ Test(parse_command, substitute)
     cr_expect_str_eq(command.data.substitute.replacement, "def");
     cr_expect_eq(regexec(&command.data.substitute.preg, "abc", 0, NULL, 0), 0);
     cr_expect_eq(regexec(&command.data.substitute.preg, "abcccc", 0, NULL, 0), 0);
-    cr_expect_eq(regexec(&command.data.substitute.preg, "bccc", 0, NULL, 0), REG_NOMATCH);
+    cr_expect_eq(regexec(&command.data.substitute.preg, "bccc", 0, NULL, 0),
+                 REG_NOMATCH);
 
-    rest =
-        parse_command(strcpy(input, "s/x/\\&\\1\\2\\3\\4\\5\\6\\7\\8\\9\\0/"), &command);
+    rest = parse_command(strcpy(input, "s/x/\\&\\1\\2\\3\\4\\5\\6\\7\\8\\9\\0/"),
+                         &command);
     cr_expect_str_empty(rest);
     cr_expect_eq(command.id, 's');
     cr_expect_str_eq(command.data.substitute.replacement,
@@ -567,7 +569,8 @@ Test(parse_command, substitute_flags_error_occurence_index_overflow, .exit_code 
 {
     parse_command(strcpy(input,
                          "s/abc*/def/"
-                         "pg9999999999999999999999999999999999999999999999999999999999999"
+                         "pg99999999999999999999999999999999999999999999999999999999"
+                         "99999"
                          "99999999999999999999999w bonjour"),
                   &command);
 }
@@ -575,4 +578,104 @@ Test(parse_command, substitute_flags_error_occurence_index_overflow, .exit_code 
 Test(parse_command, substitute_flags_error_unknown_flag, .exit_code = 1)
 {
     parse_command(strcpy(input, "s/abc*/def/p42bg bonjour"), &command);
+}
+
+Test(parse, base)
+{
+    struct command *commands;
+    commands = parse("p");
+    cr_expect_eq(commands[0].id, 'p');
+    cr_expect_eq(commands[1].id, COMMAND_LAST);
+    free(commands);
+
+    commands = parse("p;p;p;p;p;p;p;p;p;p;p;p;p;p;p;p;p;p;p;p");
+    for (size_t i = 0; i < 20; i++)
+        cr_expect_eq(commands[i].id, 'p');
+    cr_expect_eq(commands[20].id, COMMAND_LAST);
+    free(commands);
+
+    commands = parse("10q");
+    cr_expect_eq(commands[0].id, 'q');
+    cr_expect_eq(commands[0].addresses.count, 1);
+    cr_expect_eq(commands[0].addresses.addresses[0].type, ADDRESS_LINE);
+    cr_expect_eq(commands[0].addresses.addresses[0].data.line, 10);
+    cr_expect_eq(commands[1].id, COMMAND_LAST);
+    free(commands);
+
+    commands = parse("10,20p");
+    cr_expect_eq(commands[0].id, 'p');
+    cr_expect_eq(commands[0].addresses.count, 2);
+    cr_expect_eq(commands[0].addresses.addresses[0].type, ADDRESS_LINE);
+    cr_expect_eq(commands[0].addresses.addresses[0].data.line, 10);
+    cr_expect_eq(commands[0].addresses.addresses[1].type, ADDRESS_LINE);
+    cr_expect_eq(commands[0].addresses.addresses[1].data.line, 20);
+    cr_expect_eq(commands[1].id, COMMAND_LAST);
+    free(command.data.children);
+
+    commands = parse(strcpy(input, "rfoo\nwbar\n"));
+    cr_expect_eq(commands[0].id, 'r');
+    cr_expect_str_eq(commands[0].data.text, "foo");
+    cr_expect_eq(commands[1].id, 'w');
+    cr_expect_str_eq(commands[1].data.text, "bar");
+    cr_expect_eq(commands[2].id, COMMAND_LAST);
+    free(commands);
+
+    commands = parse(strcpy(input, "a\\ bonjour\n"));
+    cr_expect_eq(commands[0].id, 'a');
+    cr_expect_str_eq(commands[0].data.text, "bonjour");
+    cr_expect_eq(commands[1].id, COMMAND_LAST);
+    free(commands);
+
+    commands = parse(strcpy(input, ""));
+    cr_expect_eq(commands[0].id, COMMAND_LAST);
+    free(commands);
+
+    commands = parse(strcpy(input, ";;;;;;;; ;;;;;;"));
+    cr_expect_eq(commands[0].id, COMMAND_LAST);
+    free(commands);
+
+    commands = parse(strcpy(input, ";;;; ;;;p; ;;;;;;"));
+    cr_expect_eq(commands[0].id, 'p');
+    cr_expect_eq(commands[1].id, COMMAND_LAST);
+    free(commands);
+
+    commands = parse(strcpy(input, "\n\n \n\n\n\n\n \n\n\n"));
+    cr_expect_eq(commands[0].id, COMMAND_LAST);
+    free(commands);
+
+    commands = parse(strcpy(input, "\n\n\n\n\np\n\n\n\n\n\n"));
+    cr_expect_eq(commands[0].id, 'p');
+    cr_expect_eq(commands[1].id, COMMAND_LAST);
+    free(commands);
+
+    commands = parse(strcpy(input, "\n\n;\n; \n\np\n\n;\n\n\n;\n"));
+    cr_expect_eq(commands[0].id, 'p');
+    cr_expect_eq(commands[1].id, COMMAND_LAST);
+    free(commands);
+
+    commands = parse(strcpy(input, ";;;{;;{;;p;;};;};;;"));
+    cr_expect_eq(commands[0].id, '{');
+    cr_expect_eq(commands[0].data.children[0].id, '{');
+    cr_expect_eq(commands[0].data.children[0].data.children[0].id, 'p');
+    cr_expect_eq(commands[0].data.children[0].data.children[1].id, '}');
+    cr_expect_eq(commands[0].data.children[1].id, '}');
+    cr_expect_eq(commands[1].id, COMMAND_LAST);
+    free(commands);
+
+    commands = parse(strcpy(input, ";p;;{;;p;;};;{p;p;p};;"));
+    cr_expect_eq(commands[0].id, 'p');
+    cr_expect_eq(commands[1].id, '{');
+    cr_expect_eq(commands[1].data.children[0].id, 'p');
+    cr_expect_eq(commands[1].data.children[1].id, '}');
+    cr_expect_eq(commands[2].id, '{');
+    cr_expect_eq(commands[2].data.children[0].id, 'p');
+    cr_expect_eq(commands[2].data.children[1].id, 'p');
+    cr_expect_eq(commands[2].data.children[2].id, 'p');
+    cr_expect_eq(commands[2].data.children[3].id, '}');
+    cr_expect_eq(commands[3].id, COMMAND_LAST);
+}
+
+Test(parse, error_unexpected_closing_brace, .exit_code = 1)
+{
+    parse("}");
 }

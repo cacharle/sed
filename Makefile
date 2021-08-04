@@ -35,7 +35,7 @@ test: CCFLAGS += --coverage -g
 test: $(TEST_NAME)
 
 test_run: test
-	./$(TEST_NAME) --verbose 1 -j1
+	./$(TEST_NAME) -j4 2>&1 | sed '/^sed:.*/d'
 
 $(TEST_NAME): $(OBJDIR) $(TEST_OBJDIR) $(TEST_OBJ)
 	$(CC) $(TEST_LDFLAGS) $(TEST_OBJ) -o $@

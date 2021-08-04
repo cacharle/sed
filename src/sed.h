@@ -37,7 +37,7 @@ struct addresses
 
 typedef void (*command_function)(void);
 
-#define COMMAND_LAST '\0'
+#define COMMAND_LAST -1
 
 struct command
 {
@@ -84,5 +84,7 @@ char *
 parse_addresses(char *s, struct addresses *addresses);
 char *
 parse_command(char *s, struct command *command);
+struct command *
+parse(char *s);
 
 #endif

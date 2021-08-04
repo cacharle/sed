@@ -29,7 +29,10 @@ delimited_cut(char *s, char delim, const char *error_id)
 }
 
 static char *
-extract_delimited(char *s, char **extracted1, char **extracted2, const char *error_id)
+extract_delimited(char *      s,
+                  char **     extracted1,
+                  char **     extracted2,
+                  const char *error_id)
 {
     const char delim = *s;
     if (delim == '\\')
@@ -180,35 +183,40 @@ static const size_t commands_realloc_size = 10;
 static char *
 parse_commands(char *s, struct command **commands, bool end_on_closing_brace)
 {
+    bool has_separator = false;
     *commands = xmalloc(sizeof(struct command) * commands_realloc_size);
-    char   saved = '\0' + 1;
     size_t i = 0;
     for (i = 0; true; i++)
     {
-        skip_blank(&s);
-        if (end_on_closing_brace && *s == '\0')
-            die("unmatched '{'");
         s = parse_command(s, &(*commands)[i]);
-        if ((*commands)[i].id == ';' || (*commands)[i].id == '\n')
+        if (s[-1] == '\0')
+            has_separator = true;  // weird hack for parse*_text where the parser
+                                   // replaces the separator with  a null character
+        while (*s == ';' || *s == '\n' || isspace(*s))
         {
-            i--;
-            continue;
-        }
-        if (end_on_closing_brace && (*commands)[i].id == '}')
-            break;
-        saved = s[-1];  // weird hack for parse*_text where the parser puts a null
-                        // character in place of the separator to split the string
-        skip_blank(&s);
-        if (end_on_closing_brace && *s == '\0')
-            die("unmatched '{'");
-        if (*s == '\0')
-            break;
-        if (*s == ';' || *s == '\n')
+            if (*s == ';' || *s == '\n')
+                has_separator = true;
             s++;
-        else if (saved == '\0' || *s == '}')
-            ;
+        }
+        if (end_on_closing_brace)
+        {
+            if ((*commands)[i].id == '}')
+                break;
+            if (*s == '\0')
+                die("unmatched '{'");
+        }
         else
+        {
+            if ((*commands)[i].id == '}')
+                die("unexpected '}'");
+            if (*s == '\0')
+                break;
+        }
+        if (*s != '{' && *s != '}' && !has_separator)
             die("extra characters after command");
+        has_separator = false;
+        if ((*commands)[i].id == COMMAND_LAST)
+            i--;
         if ((i + 1) % commands_realloc_size == 0)
         {
             size_t slots = (i / commands_realloc_size) + 2;
@@ -216,20 +224,27 @@ parse_commands(char *s, struct command **commands, bool end_on_closing_brace)
                 *commands, sizeof(struct command) * (slots * commands_realloc_size));
         }
     }
+    if (!end_on_closing_brace)
+    {
+        *commands = xrealloc(*commands, sizeof(struct command) * (i + 2));
+        (*commands)[i + 1].id = COMMAND_LAST;
+    }
     return s;
 }
 
 static char *
 parse_list(char *s, struct command *command)
 {
-    return parse_commands(s, &command->data.children, '}');
+    return parse_commands(s, &command->data.children, true);
 }
 
 static char *
 parse_translate(char *s, struct command *command)
 {
-    s = extract_delimited(
-        s, &command->data.translate.from, &command->data.translate.to, "'y' command");
+    s = extract_delimited(s,
+                          &command->data.translate.from,
+                          &command->data.translate.to,
+                          "'y' command");
     replace_escape_sequence(command->data.translate.from);
     replace_escape_sequence(command->data.translate.to);
     if (strlen(command->data.translate.from) != strlen(command->data.translate.to))
@@ -244,7 +259,8 @@ parse_substitute(char *s, struct command *command)
     s = extract_delimited(
         s, &regex, &command->data.substitute.replacement, "'s' command");
     xregcomp(&command->data.substitute.preg, regex, 0);
-    replace_escape_sequence_reject(command->data.substitute.replacement, "&0123456789");
+    replace_escape_sequence_reject(command->data.substitute.replacement,
+                                   "&0123456789");
     command->data.substitute.occurence_index = 0;
     command->data.substitute.global = false;
     command->data.substitute.print = false;
@@ -318,6 +334,11 @@ static const struct command_info command_info_lookup[] = {
 char *
 parse_command(char *s, struct command *command)
 {
+    if (isblank(*s) || *s == ';' || *s == '\n' || *s == '\0')
+    {
+        command->id = COMMAND_LAST;
+        return s;
+    }
     s = parse_addresses(s, &command->addresses);
     skip_blank(&s);
     command->inverse = (*s == '!');
@@ -325,11 +346,10 @@ parse_command(char *s, struct command *command)
         s++;
     skip_blank(&s);
     command->id = *s;
-    if (command->id == ';' || command->id == '\n')
-        return s + 1;
     if (strchr(available_commands, command->id) == NULL)
         die("unknown command: '%c'", command->id);
-    const struct command_info *command_info = &command_info_lookup[(size_t)command->id];
+    const struct command_info *command_info =
+        &command_info_lookup[(size_t)command->id];
     if (command->addresses.count > command_info->addresses_max)
         die("too much addresses: '%c' accepts maximum %zu address",
             command->id,
@@ -343,8 +363,6 @@ struct command *
 parse(char *s)
 {
     struct command *commands = NULL;
-    (void)parse_commands(s, &commands, '\0');
-    /* *commands             = xrealloc(*commands, sizeof(struct command) * (i + 2)); */
-    /* (*commands)[i + 1].id = COMMAND_LAST; */
+    (void)parse_commands(s, &commands, false);
     return commands;
 }

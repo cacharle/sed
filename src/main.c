@@ -15,8 +15,8 @@ command_function command_functions_lookup[] = {
 };
 
 #define CHAR_SPACE_MAX 20480
-// need under buffer for implementation of the 'x' command (can't swap array aka constant
-// pointers)
+// need under buffer for implementation of the 'x' command (can't swap array aka
+// constant pointers)
 static char  pattern_space_under[CHAR_SPACE_MAX + 1] = {'\0'};
 static char  hold_space_under[CHAR_SPACE_MAX + 1] = {'\0'};
 static char *pattern_space = pattern_space_under;
@@ -52,12 +52,14 @@ main(int argc, char *argv[])
         script_string = argv[optind];
     }
 
-    struct command command;
-    parse_command(script_string, &command);
+    struct command *script = parse(script_string);
 
-    printf("%d\n", command.addresses.count);
-    printf("%d\n", command.inverse);
-    printf("%s\n", command.data.text);
+    /* struct command command; */
+    /* parse_command(script_string, &command); */
+    /*  */
+    /* printf("%d\n", command.addresses.count); */
+    /* printf("%d\n", command.inverse); */
+    /* printf("%s\n", command.data.text); */
 
     /* script = parse_script(script_string); */
 

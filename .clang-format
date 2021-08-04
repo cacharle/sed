@@ -10,7 +10,7 @@ IndentWidth: 4
 TabWidth: 4
 UseTab: Never
 
-ColumnLimit: 90
+ColumnLimit: 85
 
 DerivePointerAlignment: false
 PointerAlignment: Right
