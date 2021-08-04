@@ -1,5 +1,7 @@
 sed
 sed_test
 *.o
+*.gcno
+*.gcda
 tags
 vgcore.*

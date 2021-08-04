@@ -29,3 +29,8 @@ Test(read_file, base)
     remove(template);
     cr_assert_str_eq(actual, expected);
 }
+
+Test(read_file, error, .exit_code = 1)
+{
+    read_file("doesnotexist");
+}

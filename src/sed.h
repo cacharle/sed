@@ -51,11 +51,11 @@ struct command
         struct
         {
             regex_t preg;
-            char *  dest;
-            char *  write_filepath;
+            char *  replacement;
+            size_t  occurence_index;
             bool    global;
             bool    print;
-            size_t  occurence_index;
+            char *  write_filepath;
         } substitute;
         struct
         {
@@ -64,8 +64,6 @@ struct command
         } translate;
     } data;
 };
-
-typedef struct command *script_t;
 
 // utils.c
 void *

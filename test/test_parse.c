@@ -5,7 +5,7 @@ static struct address   address;
 static struct addresses addresses;
 static struct command   command;
 static char *           rest;
-static char             input[64];
+static char             input[2048];
 
 Test(parse_address, last)
 {
@@ -172,6 +172,11 @@ Test(parse_command, singleton)
     }
 }
 
+Test(parse_command, error_unknown_command, .exit_code = 1)
+{
+    parse_command("o", &command);
+}
+
 Test(parse_command, text)
 {
     const char *text_commands = ":btrw";
@@ -227,6 +232,11 @@ Test(parse_command, escapable_text_escape)
     cr_expect_str_empty(rest);
     cr_expect_eq(command.id, 'a');
     cr_expect_str_eq(command.data.text, "foo\t\nbaz\r\v\fbar");
+}
+
+Test(parse_command, escapable_text_escape_error_no_backslash, .exit_code = 1)
+{
+    parse_command(strcpy(input, "a foo"), &command);
 }
 
 Test(parse_command, addresses_max_1_comment, .exit_code = 1)
@@ -447,4 +457,122 @@ Test(parse_command, translate_error_from_smaller, .exit_code = 1)
 Test(parse_command, translate_error_to_smaller, .exit_code = 1)
 {
     rest = parse_command(strcpy(input, "y/abcd/efg/"), &command);
+}
+
+Test(parse_command, substitute)
+{
+    rest = parse_command(strcpy(input, "s/abc*/def/"), &command);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, 's');
+    cr_expect_str_eq(command.data.substitute.replacement, "def");
+    cr_expect_eq(regexec(&command.data.substitute.preg, "abc", 0, NULL, 0), 0);
+    cr_expect_eq(regexec(&command.data.substitute.preg, "abcccc", 0, NULL, 0), 0);
+    cr_expect_eq(regexec(&command.data.substitute.preg, "bccc", 0, NULL, 0), REG_NOMATCH);
+
+    rest =
+        parse_command(strcpy(input, "s/x/\\&\\1\\2\\3\\4\\5\\6\\7\\8\\9\\0/"), &command);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, 's');
+    cr_expect_str_eq(command.data.substitute.replacement,
+                     "\\&\\1\\2\\3\\4\\5\\6\\7\\8\\9\\0");
+
+    rest = parse_command(strcpy(input, "s/x/\\a\\t\\n\\r\\v\\f\\o/"), &command);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, 's');
+    cr_expect_str_eq(command.data.substitute.replacement, "a\t\n\r\v\fo");
+
+    rest = parse_command(strcpy(input, "s/a\\t*/def/"), &command);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, 's');
+    cr_expect_str_eq(command.data.substitute.replacement, "def");
+    cr_expect_eq(regexec(&command.data.substitute.preg, "a\t", 0, NULL, 0), 0);
+    cr_expect_eq(regexec(&command.data.substitute.preg, "a\t\t\t\t", 0, NULL, 0), 0);
+    cr_expect_eq(regexec(&command.data.substitute.preg, "\t\t\t", 0, NULL, 0),
+                 REG_NOMATCH);
+
+    rest = parse_command(strcpy(input, "s_\\_abc*_def\\__"), &command);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, 's');
+    cr_expect_str_eq(command.data.substitute.replacement, "def_");
+    cr_expect_eq(regexec(&command.data.substitute.preg, "_abc", 0, NULL, 0), 0);
+    cr_expect_eq(regexec(&command.data.substitute.preg, "_abcccc", 0, NULL, 0), 0);
+    cr_expect_eq(regexec(&command.data.substitute.preg, "abccc", 0, NULL, 0),
+                 REG_NOMATCH);
+}
+
+Test(parse_command, substitute_flags)
+{
+    rest = parse_command(strcpy(input, "s/abc*/def/p"), &command);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, 's');
+    cr_expect(command.data.substitute.print);
+    cr_expect(!command.data.substitute.global);
+    cr_expect_null(command.data.substitute.write_filepath);
+    cr_expect_eq(command.data.substitute.occurence_index, 0);
+
+    rest = parse_command(strcpy(input, "s/abc*/def/g"), &command);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, 's');
+    cr_expect(!command.data.substitute.print);
+    cr_expect(command.data.substitute.global);
+    cr_expect_null(command.data.substitute.write_filepath);
+    cr_expect_eq(command.data.substitute.occurence_index, 0);
+
+    rest = parse_command(strcpy(input, "s/abc*/def/w bonjour"), &command);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, 's');
+    cr_expect(!command.data.substitute.print);
+    cr_expect(!command.data.substitute.global);
+    cr_expect_str_eq(command.data.substitute.write_filepath, "bonjour");
+    cr_expect_eq(command.data.substitute.occurence_index, 0);
+
+    rest = parse_command(strcpy(input, "s/abc*/def/42"), &command);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, 's');
+    cr_expect(!command.data.substitute.print);
+    cr_expect(!command.data.substitute.global);
+    cr_expect_null(command.data.substitute.write_filepath);
+    cr_expect_eq(command.data.substitute.occurence_index, 42);
+
+    rest = parse_command(strcpy(input, "s/abc*/def/pg99w bonjour"), &command);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, 's');
+    cr_expect(command.data.substitute.print);
+    cr_expect(command.data.substitute.global);
+    cr_expect_str_eq(command.data.substitute.write_filepath, "bonjour");
+    cr_expect_eq(command.data.substitute.occurence_index, 99);
+}
+
+Test(parse_command, substitute_flags_error_multiple_print, .exit_code = 1)
+{
+    parse_command(strcpy(input, "s/abc*/def/pg99pw bonjour"), &command);
+}
+
+Test(parse_command, substitute_flags_error_multiple_global, .exit_code = 1)
+{
+    parse_command(strcpy(input, "s/abc*/def/pg99gw bonjour"), &command);
+}
+
+Test(parse_command, substitute_flags_error_multiple_occurence_index, .exit_code = 1)
+{
+    parse_command(strcpy(input, "s/abc*/def/32pg99w bonjour"), &command);
+}
+
+Test(parse_command, substitute_flags_error_occurence_index_zero, .exit_code = 1)
+{
+    parse_command(strcpy(input, "s/abc*/def/pg0w bonjour"), &command);
+}
+
+Test(parse_command, substitute_flags_error_occurence_index_overflow, .exit_code = 1)
+{
+    parse_command(strcpy(input,
+                         "s/abc*/def/"
+                         "pg9999999999999999999999999999999999999999999999999999999999999"
+                         "99999999999999999999999w bonjour"),
+                  &command);
+}
+
+Test(parse_command, substitute_flags_error_unknown_flag, .exit_code = 1)
+{
+    parse_command(strcpy(input, "s/abc*/def/p42bg bonjour"), &command);
 }

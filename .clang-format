@@ -50,7 +50,7 @@ MaxEmptyLinesToKeep: 1
 
 PenaltyBreakBeforeFirstCallParameter: 1
 PenaltyBreakString: 1
-PenaltyExcessCharacter: 10
+PenaltyExcessCharacter: 1000
 
 SpaceAfterCStyleCast: false
 SpaceBeforeAssignmentOperators: true

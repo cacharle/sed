@@ -9,6 +9,12 @@ skip_blank(char **s_ptr)
 }
 
 static char *
+str_left_shift(char *s)
+{
+    return memmove(s, s + 1, strlen(s));
+}
+
+static char *
 delimited_cut(char *s, char delim, const char *error_id)
 {
     for (; *s != delim; s++)
@@ -16,7 +22,7 @@ delimited_cut(char *s, char delim, const char *error_id)
         if (*s == '\0')
             die("unterminated %s", error_id);
         if (s[0] == '\\' && s[1] == delim)
-            memmove(s, s + 1, strlen(s));
+            str_left_shift(s);
     }
     *s = '\0';
     return s + 1;
@@ -57,16 +63,35 @@ static const char  escape_lookup[] = {
 };
 
 static void
-replace_escape_sequence(char *s)
+replace_escape_sequence_reject(char *s, const char *reject)
 {
     for (; *s != '\0'; s++)
     {
-        if (s[0] == '\\' && s[1] != '\0')
+        if (s[0] == '\\' && s[1] != '\0' && strchr(reject, s[1]) == NULL)
         {
             if (strchr(available_escape, s[1]) != NULL)
                 s[1] = escape_lookup[(size_t)s[1]];
-            memmove(s, s + 1, strlen(s));
+            str_left_shift(s);
         }
+    }
+}
+
+static void
+replace_escape_sequence(char *s)
+{
+    replace_escape_sequence_reject(s, "");
+}
+
+static void
+xregcomp(regex_t *preg, const char *regex, int cflags)
+{
+    const int errcode = regcomp(preg, regex, cflags);
+    if (errcode != 0)
+    {
+        const size_t errbuf_size = 128;
+        char         errbuf[errbuf_size + 1];
+        regerror(errcode, preg, errbuf, errbuf_size);
+        die("regex error '%s': %s", regex, errbuf);
     }
 }
 
@@ -93,14 +118,7 @@ parse_address(char *s, struct address *address)
     char *regex = NULL;
     s = extract_delimited(s, &regex, NULL, "address regex");
     address->type = ADDRESS_RE;
-    const int errcode = regcomp(&address->data.preg, regex, 0);
-    if (errcode != 0)
-    {
-        const size_t errbuf_size = 128;
-        char         errbuf[errbuf_size + 1];
-        regerror(errcode, &address->data.preg, errbuf, errbuf_size);
-        die("regex error '%s': %s", s, errbuf);
-    }
+    xregcomp(&address->data.preg, regex, 0);
     return s;
 }
 
@@ -219,6 +237,61 @@ parse_translate(char *s, struct command *command)
     return s;
 }
 
+static char *
+parse_substitute(char *s, struct command *command)
+{
+    char *regex;
+    s = extract_delimited(
+        s, &regex, &command->data.substitute.replacement, "'s' command");
+    xregcomp(&command->data.substitute.preg, regex, 0);
+    replace_escape_sequence_reject(command->data.substitute.replacement, "&0123456789");
+    command->data.substitute.occurence_index = 0;
+    command->data.substitute.global = false;
+    command->data.substitute.print = false;
+    command->data.substitute.write_filepath = NULL;
+    while (*s != '\0' && (strchr("gpw", *s) != NULL || isdigit(*s)))
+    {
+        if (*s == 'g')
+        {
+            if (command->data.substitute.global)
+                die("multiple number 'g' options to 's' command");
+            command->data.substitute.global = true;
+            s++;
+        }
+        else if (*s == 'p')
+        {
+            if (command->data.substitute.global)
+                die("multiple number 'p' options to 's' command");
+            command->data.substitute.print = true;
+            s++;
+        }
+        else if (*s == 'w')
+        {
+            struct command write_file_command;
+            write_file_command.id = 'w';
+            s++;
+            skip_blank(&s);
+            s = parse_text(s, &write_file_command);
+            command->data.substitute.write_filepath = write_file_command.data.text;
+            break;
+        }
+        else
+        {
+            if (command->data.substitute.occurence_index != 0)
+                die("multiple number options to 's' command");
+            errno = 0;
+            command->data.substitute.occurence_index = strtoul(s, &s, 10);
+            if (errno != 0)
+                die("number option invalid: %s", strerror(errno));
+            if (command->data.substitute.occurence_index == 0)
+                die("number option in 's' command may not be zero");
+        }
+    }
+    if (*s != '\0' && *s != '\n' && *s != ';' && *s != '}' && !isblank(*s))
+        die("unknown option to 's' command");
+    return s;
+}
+
 struct command_info
 {
     char *(*func)(char *, struct command *);
@@ -238,7 +311,7 @@ static const struct command_info command_info_lookup[] = {
     ['N'] = {parse_singleton, 2},      ['p'] = {parse_singleton, 2},
     ['P'] = {parse_singleton, 2},      ['q'] = {parse_singleton, 1},
     ['x'] = {parse_singleton, 2},      ['='] = {parse_singleton, 2},
-    ['#'] = {parse_singleton, 0},      ['s'] = {NULL, 2},
+    ['#'] = {parse_singleton, 0},      ['s'] = {parse_substitute, 2},
     ['y'] = {parse_translate, 2},
 };
 
