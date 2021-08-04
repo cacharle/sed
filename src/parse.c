@@ -1,13 +1,21 @@
 #include "sed.h"
 
-static const char *available_commands = "{aci:btrwdDgGhHlnNpPqx=#sy";
+static inline char *
+skip_blank(char **s_ptr)
+{
+    while (isblank(**s_ptr))
+        (*s_ptr)++;
+    return *s_ptr;
+}
+
+static const char *available_commands = "{}aci:btrwdDgGhHlnNpPqx=#sy";
 
 #define ERRBUF_SIZE 128
 
 char *
 parse_address(char *s, struct address *address)
 {
-    if (s[0] == '!' || strchr(available_commands, s[0]) != NULL)
+    if (strchr("!;\n", s[0]) != NULL || strchr(available_commands, s[0]) != NULL)
         return s;
     if (s[0] == '$')
     {
@@ -22,7 +30,7 @@ parse_address(char *s, struct address *address)
             die("invalid address: 0");
         return s;
     }
-    char  delim = s[0];
+    const char  delim = s[0];
     char *end   = s + 1;
     while (*end != delim && *end != '\0')
     {
@@ -34,7 +42,7 @@ parse_address(char *s, struct address *address)
         die("unterminated address regex '%s'", s);
     *end          = '\0';
     address->type = ADDRESS_RE;
-    int errcode   = regcomp(&address->data.preg, s + 1, 0);
+    const int errcode   = regcomp(&address->data.preg, s + 1, 0);
     if (errcode != 0)
     {
         char errbuf[ERRBUF_SIZE + 1];
@@ -99,8 +107,7 @@ parse_escapable_text(char *s, struct command *command)
     if (*s != '\\')
         die("expected '\\' after a/c/i commands");
     s++;
-    while (isspace(*s))
-        s++;
+    skip_blank(&s);
     command->data.text = s;
     while (*s != '\0' && *s != '\n')
     {
@@ -119,37 +126,45 @@ parse_escapable_text(char *s, struct command *command)
 static const size_t commands_realloc_size = 10;
 
 static char *
-parse_commands(char *s, struct command **commands, char end_delim)
+parse_commands(char *s, struct command **commands, bool end_on_closing_brace)
 {
-    *commands = xmalloc(sizeof(struct command) * commands_realloc_size);
-    char * saved;
-    size_t i = 0;
+    *commands    = xmalloc(sizeof(struct command) * commands_realloc_size);
+    char   saved = '\0' + 1;
+    size_t i     = 0;
     for (i = 0; true; i++)
     {
-        s     = parse_command(s, &(*commands)[i]);
-        saved = &s[-1];  // weird hack for parse*_text where the parser puts a null
-                         // character in place of the separator to split the string
-        while (isspace(*s))
-            s++;
-        if (*s == end_delim || *s == '\0')
+        skip_blank(&s);
+        if (end_on_closing_brace && *s == '\0')
+            die("unmatched '{'");
+        s = parse_command(s, &(*commands)[i]);
+        if ((*commands)[i].id == ';' || (*commands)[i].id == '\n')
+		{
+			i--;
+			continue;
+		}
+        if (end_on_closing_brace && (*commands)[i].id == '}')
             break;
-        if (*s == ';' || *s == '\n' || *saved == '\0')
-        {
-            if (*s == ';' || *s == '\n')
-                s++;
-        }
+        saved = s[-1];  // weird hack for parse*_text where the parser puts a null
+                        // character in place of the separator to split the string
+        skip_blank(&s);
+        if (end_on_closing_brace && *s == '\0')
+            die("unmatched '{'");
+        if (*s == '\0')
+            break;
+        if (*s == ';' || *s == '\n')
+            s++;
+        else if (saved == '\0' || *s == '}')
+            ;
         else
             die("extra characters after command");
         if ((i + 1) % commands_realloc_size == 0)
         {
-            size_t slots = (i / commands_realloc_size) + 1;
+            size_t slots = (i / commands_realloc_size) + 2;
             *commands    = xrealloc(
                 *commands, sizeof(struct command) * (slots * commands_realloc_size));
         }
     }
-    *commands             = xrealloc(*commands, sizeof(struct command) * (i + 2));
-    (*commands)[i + 1].id = COMMAND_LAST;
-    return s + 1;
+    return s;
 }
 
 static char *
@@ -166,6 +181,7 @@ struct command_info
 
 static const struct command_info command_info_lookup[] = {
     ['{'] = {parse_list, 2},
+    ['}'] = {parse_singleton, 0},
     ['a'] = {parse_escapable_text, 2},
     ['c'] = {parse_escapable_text, 2},
     ['i'] = {parse_escapable_text, 2},
@@ -196,11 +212,15 @@ static const struct command_info command_info_lookup[] = {
 char *
 parse_command(char *s, struct command *command)
 {
-    s                = parse_addresses(s, &command->addresses);
+    s = parse_addresses(s, &command->addresses);
+    skip_blank(&s);
     command->inverse = (*s == '!');
     if (*s == '!')
         s++;
+    skip_blank(&s);
     command->id = *s;
+    if (command->id == ';' || command->id == '\n')
+        return s + 1;
     if (strchr(available_commands, command->id) == NULL)
         die("unknown command: '%c'", command->id);
     const struct command_info *command_info = &command_info_lookup[(size_t)command->id];
@@ -209,8 +229,7 @@ parse_command(char *s, struct command *command)
             command->id,
             command_info->addresses_max);
     s++;
-    while (isblank(*s))
-        s++;
+    skip_blank(&s);
     return command_info->func(s, command);
 }
 
@@ -219,5 +238,7 @@ parse(char *s)
 {
     struct command *commands = NULL;
     (void)parse_commands(s, &commands, '\0');
+    /* *commands             = xrealloc(*commands, sizeof(struct command) * (i + 2)); */
+    /* (*commands)[i + 1].id = COMMAND_LAST; */
     return commands;
 }

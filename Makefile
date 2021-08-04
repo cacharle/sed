@@ -34,7 +34,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c $(INCLUDE)
 test: $(TEST_NAME)
 
 test_run: test
-	./$(TEST_NAME) --verbose -j1
+	./$(TEST_NAME) --verbose 1 -j1
 
 $(TEST_NAME): $(OBJDIR) $(TEST_OBJDIR) $(TEST_OBJ)
 	$(CC) -lcriterion $(TEST_OBJ) -o $@

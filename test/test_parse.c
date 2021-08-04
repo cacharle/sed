@@ -10,26 +10,26 @@ static char             input[64];
 Test(parse_address, last)
 {
     rest = parse_address("$", &address);
-    cr_assert_str_empty(rest);
-    cr_assert_eq(address.type, ADDRESS_LAST);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(address.type, ADDRESS_LAST);
 }
 
 Test(parse_address, line)
 {
     rest = parse_address("1", &address);
-    cr_assert_str_empty(rest);
-    cr_assert_eq(address.type, ADDRESS_LINE);
-    cr_assert_eq(address.data.line, 1);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(address.type, ADDRESS_LINE);
+    cr_expect_eq(address.data.line, 1);
 
     rest = parse_address("1000", &address);
-    cr_assert_str_empty(rest);
-    cr_assert_eq(address.type, ADDRESS_LINE);
-    cr_assert_eq(address.data.line, 1000);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(address.type, ADDRESS_LINE);
+    cr_expect_eq(address.data.line, 1000);
 
     rest = parse_address("001", &address);
-    cr_assert_str_empty(rest);
-    cr_assert_eq(address.type, ADDRESS_LINE);
-    cr_assert_eq(address.data.line, 1);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(address.type, ADDRESS_LINE);
+    cr_expect_eq(address.data.line, 1);
 }
 
 Test(parse_address, line_error, .exit_code = 1)
@@ -41,30 +41,30 @@ Test(parse_address, re)
 {
     strcpy(input, "/abc*/");
     rest = parse_address(input, &address);
-    cr_assert_str_empty(rest);
-    cr_assert_eq(address.type, ADDRESS_RE);
-    cr_assert_eq(regexec(&address.data.preg, "abc", 0, NULL, 0), 0);
-    cr_assert_eq(regexec(&address.data.preg, "abcccc", 0, NULL, 0), 0);
-    cr_assert_eq(regexec(&address.data.preg, "bccc", 0, NULL, 0), REG_NOMATCH);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(address.type, ADDRESS_RE);
+    cr_expect_eq(regexec(&address.data.preg, "abc", 0, NULL, 0), 0);
+    cr_expect_eq(regexec(&address.data.preg, "abcccc", 0, NULL, 0), 0);
+    cr_expect_eq(regexec(&address.data.preg, "bccc", 0, NULL, 0), REG_NOMATCH);
 
     strcpy(input, "|abc*|");
     rest = parse_address(input, &address);
-    cr_assert_str_empty(rest);
-    cr_assert_eq(address.type, ADDRESS_RE);
-    cr_assert_eq(regexec(&address.data.preg, "abc", 0, NULL, 0), 0);
-    cr_assert_eq(regexec(&address.data.preg, "abcccc", 0, NULL, 0), 0);
-    cr_assert_eq(regexec(&address.data.preg, "bccc", 0, NULL, 0), REG_NOMATCH);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(address.type, ADDRESS_RE);
+    cr_expect_eq(regexec(&address.data.preg, "abc", 0, NULL, 0), 0);
+    cr_expect_eq(regexec(&address.data.preg, "abcccc", 0, NULL, 0), 0);
+    cr_expect_eq(regexec(&address.data.preg, "bccc", 0, NULL, 0), REG_NOMATCH);
 }
 
 Test(parse_address, re_escape)
 {
     strcpy(input, "/a\\/bc*/");
     rest = parse_address(input, &address);
-    cr_assert_str_empty(rest);
-    cr_assert_eq(address.type, ADDRESS_RE);
-    cr_assert_eq(regexec(&address.data.preg, "a/bc", 0, NULL, 0), 0);
-    cr_assert_eq(regexec(&address.data.preg, "a/bcccc", 0, NULL, 0), 0);
-    cr_assert_eq(regexec(&address.data.preg, "/bccc", 0, NULL, 0), REG_NOMATCH);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(address.type, ADDRESS_RE);
+    cr_expect_eq(regexec(&address.data.preg, "a/bc", 0, NULL, 0), 0);
+    cr_expect_eq(regexec(&address.data.preg, "a/bcccc", 0, NULL, 0), 0);
+    cr_expect_eq(regexec(&address.data.preg, "/bccc", 0, NULL, 0), REG_NOMATCH);
 }
 
 Test(parse_address, re_error, .exit_code = 1)
@@ -87,77 +87,77 @@ Test(parse_address, re_regex_error, .exit_code = 1)
 
 Test(parse_address, output)
 {
-    cr_assert_str_eq("foo", parse_address("$foo", &address));
-    cr_assert_str_eq("foo", parse_address("1000foo", &address));
-    cr_assert_str_eq("foo", parse_address(strcpy(input, "/a\\/bc*/foo"), &address));
+    cr_expect_str_eq("foo", parse_address("$foo", &address));
+    cr_expect_str_eq("foo", parse_address("1000foo", &address));
+    cr_expect_str_eq("foo", parse_address(strcpy(input, "/a\\/bc*/foo"), &address));
 }
 
 Test(parse_addresses, none)
 {
     rest = parse_addresses("a bonjour", &addresses);
-    cr_assert_str_eq("a bonjour", rest);
-    cr_assert_eq(addresses.count, 0);
+    cr_expect_str_eq("a bonjour", rest);
+    cr_expect_eq(addresses.count, 0);
 }
 
 Test(parse_addresses, end)
 {
     rest = parse_addresses("$", &addresses);
-    cr_assert_str_empty(rest);
-    cr_assert_eq(addresses.count, 1);
-    cr_assert_eq(addresses.addresses[0].type, ADDRESS_LAST);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(addresses.count, 1);
+    cr_expect_eq(addresses.addresses[0].type, ADDRESS_LAST);
 
     rest = parse_addresses("$,$", &addresses);
-    cr_assert_str_empty(rest);
-    cr_assert_eq(addresses.count, 2);
-    cr_assert_eq(addresses.addresses[0].type, ADDRESS_LAST);
-    cr_assert_eq(addresses.addresses[1].type, ADDRESS_LAST);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(addresses.count, 2);
+    cr_expect_eq(addresses.addresses[0].type, ADDRESS_LAST);
+    cr_expect_eq(addresses.addresses[1].type, ADDRESS_LAST);
 }
 
 Test(parse_addresses, line)
 {
     rest = parse_addresses("10", &addresses);
-    cr_assert_str_empty(rest);
-    cr_assert_eq(addresses.count, 1);
-    cr_assert_eq(addresses.addresses[0].type, ADDRESS_LINE);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(addresses.count, 1);
+    cr_expect_eq(addresses.addresses[0].type, ADDRESS_LINE);
 
     rest = parse_addresses("10,400", &addresses);
-    cr_assert_str_empty(rest);
-    cr_assert_eq(addresses.count, 2);
-    cr_assert_eq(addresses.addresses[0].type, ADDRESS_LINE);
-    cr_assert_eq(addresses.addresses[1].type, ADDRESS_LINE);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(addresses.count, 2);
+    cr_expect_eq(addresses.addresses[0].type, ADDRESS_LINE);
+    cr_expect_eq(addresses.addresses[1].type, ADDRESS_LINE);
 }
 
 Test(parse_addresses, re)
 {
     rest = parse_addresses(strcpy(input, "/abc*/"), &addresses);
-    cr_assert_str_empty(rest);
-    cr_assert_eq(addresses.count, 1);
-    cr_assert_eq(addresses.addresses[0].type, ADDRESS_RE);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(addresses.count, 1);
+    cr_expect_eq(addresses.addresses[0].type, ADDRESS_RE);
 
     rest = parse_addresses(strcpy(input, "/abc*/,|.*cba|"), &addresses);
-    cr_assert_str_empty(rest);
-    cr_assert_eq(addresses.count, 2);
-    cr_assert_eq(addresses.addresses[0].type, ADDRESS_RE);
-    cr_assert_eq(addresses.addresses[1].type, ADDRESS_RE);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(addresses.count, 2);
+    cr_expect_eq(addresses.addresses[0].type, ADDRESS_RE);
+    cr_expect_eq(addresses.addresses[1].type, ADDRESS_RE);
 }
 
 Test(parse_addresses, output)
 {
-    cr_assert_str_eq("foo", parse_addresses("$foo", &addresses));
-    cr_assert_str_eq("foo", parse_addresses("$,$foo", &addresses));
-    cr_assert_str_eq("foo", parse_addresses("10foo", &addresses));
-    cr_assert_str_eq("foo", parse_addresses("10,400foo", &addresses));
-    cr_assert_str_eq("foo", parse_addresses(strcpy(input, "/abc*/foo"), &addresses));
-    cr_assert_str_eq("foo",
+    cr_expect_str_eq("foo", parse_addresses("$foo", &addresses));
+    cr_expect_str_eq("foo", parse_addresses("$,$foo", &addresses));
+    cr_expect_str_eq("foo", parse_addresses("10foo", &addresses));
+    cr_expect_str_eq("foo", parse_addresses("10,400foo", &addresses));
+    cr_expect_str_eq("foo", parse_addresses(strcpy(input, "/abc*/foo"), &addresses));
+    cr_expect_str_eq("foo",
                      parse_addresses(strcpy(input, "/abc*/,|.*cba|foo"), &addresses));
 }
 
 Test(parse_command, inverse)
 {
     rest = parse_command("!p", &command);
-    cr_assert_str_empty(rest);
-    cr_assert_eq(command.id, 'p');
-    cr_assert(command.inverse);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, 'p');
+    cr_expect(command.inverse);
 }
 
 Test(parse_command, singleton)
@@ -168,8 +168,8 @@ Test(parse_command, singleton)
         input[0] = singleton_commands[i];
         input[1] = '\0';
         rest     = parse_command(input, &command);
-        cr_assert_str_empty(rest);
-        cr_assert_eq(command.id, singleton_commands[i]);
+        cr_expect_str_empty(rest);
+        cr_expect_eq(command.id, singleton_commands[i]);
     }
 }
 
@@ -181,9 +181,9 @@ Test(parse_command, text)
         input[0] = text_commands[i];
         strcpy(input + 1, "bonjour");
         rest = parse_command(input, &command);
-        cr_assert_str_empty(rest);
-        cr_assert_eq(command.id, text_commands[i]);
-        cr_assert_str_eq(command.data.text, "bonjour");
+        cr_expect_str_empty(rest);
+        cr_expect_eq(command.id, text_commands[i]);
+        cr_expect_str_eq(command.data.text, "bonjour");
     }
 }
 
@@ -211,23 +211,23 @@ Test(parse_command, escapable_text)
         input[0] = text_commands[i];
         strcpy(input + 1, "\\bonjour");
         rest = parse_command(input, &command);
-        cr_assert_str_empty(rest);
-        cr_assert_eq(command.id, text_commands[i]);
-        cr_assert_str_eq(command.data.text, "bonjour");
+        cr_expect_str_empty(rest);
+        cr_expect_eq(command.id, text_commands[i]);
+        cr_expect_str_eq(command.data.text, "bonjour");
     }
 }
 
 Test(parse_command, escapable_text_escape)
 {
     rest = parse_command(strcpy(input, "a\\\\b\\on\\j\\o\\ur"), &command);
-    cr_assert_str_empty(rest);
-    cr_assert_eq(command.id, 'a');
-    cr_assert_str_eq(command.data.text, "bonjour");
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, 'a');
+    cr_expect_str_eq(command.data.text, "bonjour");
 
     rest = parse_command(strcpy(input, "a\\foo\\t\\nbaz\\r\\v\\fbar"), &command);
-    cr_assert_str_empty(rest);
-    cr_assert_eq(command.id, 'a');
-    cr_assert_str_eq(command.data.text, "foo\t\nbaz\r\v\fbar");
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, 'a');
+    cr_expect_str_eq(command.data.text, "foo\t\nbaz\r\v\fbar");
 }
 
 Test(parse_command, addresses_max_1_comment, .exit_code = 1)
@@ -258,57 +258,157 @@ Test(parse_command, addresses_max_2_quit, .exit_code = 1)
 Test(parse_command, list)
 {
     rest = parse_command("{p}", &command);
-    cr_assert_str_empty(rest);
-    cr_assert_eq(command.id, '{');
-    cr_assert_eq(command.data.children[0].id, 'p');
-    cr_assert_eq(command.data.children[1].id, COMMAND_LAST);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, '{');
+    cr_expect_eq(command.data.children[0].id, 'p');
+    cr_expect_eq(command.data.children[1].id, '}');
     free(command.data.children);
 
-    rest = parse_command("{p;p;p;p;p;p;p;p;p;p}", &command);
-    cr_assert_str_empty(rest);
-    cr_assert_eq(command.id, '{');
-    for (size_t i = 0; i < 10; i++)
-        cr_assert_eq(command.data.children[i].id, 'p');
-    cr_assert_eq(command.data.children[10].id, COMMAND_LAST);
+    rest = parse_command("{p;p;p;p;p;p;p;p;p;p;p;p;p;p;p;p;p;p;p;p}", &command);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, '{');
+    for (size_t i = 0; i < 20; i++)
+        cr_expect_eq(command.data.children[i].id, 'p');
+    cr_expect_eq(command.data.children[20].id, '}');
     free(command.data.children);
 
     rest = parse_command("{10q}", &command);
-    cr_assert_str_empty(rest);
-    cr_assert_eq(command.id, '{');
-    cr_assert_eq(command.data.children[0].id, 'q');
-    cr_assert_eq(command.data.children[0].addresses.count, 1);
-    cr_assert_eq(command.data.children[0].addresses.addresses[0].type, ADDRESS_LINE);
-    cr_assert_eq(command.data.children[0].addresses.addresses[0].data.line, 10);
-    cr_assert_eq(command.data.children[1].id, COMMAND_LAST);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, '{');
+    cr_expect_eq(command.data.children[0].id, 'q');
+    cr_expect_eq(command.data.children[0].addresses.count, 1);
+    cr_expect_eq(command.data.children[0].addresses.addresses[0].type, ADDRESS_LINE);
+    cr_expect_eq(command.data.children[0].addresses.addresses[0].data.line, 10);
+    cr_expect_eq(command.data.children[1].id, '}');
     free(command.data.children);
 
     rest = parse_command("{10,20p}", &command);
-    cr_assert_str_empty(rest);
-    cr_assert_eq(command.id, '{');
-    cr_assert_eq(command.data.children[0].id, 'p');
-    cr_assert_eq(command.data.children[0].addresses.count, 2);
-    cr_assert_eq(command.data.children[0].addresses.addresses[0].type, ADDRESS_LINE);
-    cr_assert_eq(command.data.children[0].addresses.addresses[0].data.line, 10);
-    cr_assert_eq(command.data.children[0].addresses.addresses[1].type, ADDRESS_LINE);
-    cr_assert_eq(command.data.children[0].addresses.addresses[1].data.line, 20);
-    cr_assert_eq(command.data.children[1].id, COMMAND_LAST);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, '{');
+    cr_expect_eq(command.data.children[0].id, 'p');
+    cr_expect_eq(command.data.children[0].addresses.count, 2);
+    cr_expect_eq(command.data.children[0].addresses.addresses[0].type, ADDRESS_LINE);
+    cr_expect_eq(command.data.children[0].addresses.addresses[0].data.line, 10);
+    cr_expect_eq(command.data.children[0].addresses.addresses[1].type, ADDRESS_LINE);
+    cr_expect_eq(command.data.children[0].addresses.addresses[1].data.line, 20);
+    cr_expect_eq(command.data.children[1].id, '}');
     free(command.data.children);
 
     rest = parse_command(strcpy(input, "{rfoo\nwbar\n}"), &command);
-    cr_assert_str_empty(rest);
-    cr_assert_eq(command.id, '{');
-    cr_assert_eq(command.data.children[0].id, 'r');
-    cr_assert_str_eq(command.data.children[0].data.text, "foo");
-    cr_assert_eq(command.data.children[1].id, 'w');
-    cr_assert_str_eq(command.data.children[1].data.text, "bar");
-    cr_assert_eq(command.data.children[2].id, COMMAND_LAST);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, '{');
+    cr_expect_eq(command.data.children[0].id, 'r');
+    cr_expect_str_eq(command.data.children[0].data.text, "foo");
+    cr_expect_eq(command.data.children[1].id, 'w');
+    cr_expect_str_eq(command.data.children[1].data.text, "bar");
+    cr_expect_eq(command.data.children[2].id, '}');
     free(command.data.children);
 
     rest = parse_command(strcpy(input, "{a\\ bonjour\n}"), &command);
-    cr_assert_str_empty(rest);
-    cr_assert_eq(command.id, '{');
-    cr_assert_eq(command.data.children[0].id, 'a');
-    cr_assert_str_eq(command.data.children[0].data.text, "bonjour");
-    cr_assert_eq(command.data.children[1].id, COMMAND_LAST);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, '{');
+    cr_expect_eq(command.data.children[0].id, 'a');
+    cr_expect_str_eq(command.data.children[0].data.text, "bonjour");
+    cr_expect_eq(command.data.children[1].id, '}');
     free(command.data.children);
+
+    rest = parse_command(strcpy(input, "{}"), &command);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, '{');
+    cr_expect_eq(command.data.children[0].id, '}');
+    free(command.data.children);
+
+    rest = parse_command(strcpy(input, "{;;;;;;;;;;;;;;}"), &command);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, '{');
+    cr_expect_eq(command.data.children[0].id, '}');
+    free(command.data.children);
+
+    rest = parse_command(strcpy(input, "{;;;;;;;p;;;;;;;}"), &command);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, '{');
+    cr_expect_eq(command.data.children[0].id, 'p');
+    cr_expect_eq(command.data.children[1].id, '}');
+    free(command.data.children);
+
+    rest = parse_command(strcpy(input, "{\n\n\n\n\n\n\n\n\n\n}"), &command);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, '{');
+    cr_expect_eq(command.data.children[0].id, '}');
+    free(command.data.children);
+
+    rest = parse_command(strcpy(input, "{\n\n\n\n\np\n\n\n\n\n\n}"), &command);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, '{');
+    cr_expect_eq(command.data.children[0].id, 'p');
+    cr_expect_eq(command.data.children[1].id, '}');
+    free(command.data.children);
+
+    rest = parse_command(strcpy(input, "{\n\n;\n;\n\np\n\n;\n\n\n;\n}"), &command);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, '{');
+    cr_expect_eq(command.data.children[0].id, 'p');
+    cr_expect_eq(command.data.children[1].id, '}');
+    free(command.data.children);
+
+    rest = parse_command(strcpy(input, "{;;;{;;{;;p;;};;};;;}"), &command);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, '{');
+    cr_expect_eq(command.data.children[0].id, '{');
+    cr_expect_eq(command.data.children[0].data.children[0].id, '{');
+    cr_expect_eq(command.data.children[0].data.children[0].data.children[0].id, 'p');
+    cr_expect_eq(command.data.children[0].data.children[0].data.children[1].id, '}');
+    cr_expect_eq(command.data.children[0].data.children[1].id, '}');
+    cr_expect_eq(command.data.children[1].id, '}');
+    free(command.data.children);
+
+    rest = parse_command(strcpy(input, "{;p;;{;;p;;};;{p;p;p};;}"), &command);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, '{');
+    cr_expect_eq(command.data.children[0].id, 'p');
+    cr_expect_eq(command.data.children[1].id, '{');
+    cr_expect_eq(command.data.children[1].data.children[0].id, 'p');
+    cr_expect_eq(command.data.children[1].data.children[1].id, '}');
+    cr_expect_eq(command.data.children[2].id, '{');
+    cr_expect_eq(command.data.children[2].data.children[0].id, 'p');
+    cr_expect_eq(command.data.children[2].data.children[1].id, 'p');
+    cr_expect_eq(command.data.children[2].data.children[2].id, 'p');
+    cr_expect_eq(command.data.children[2].data.children[3].id, '}');
+    cr_expect_eq(command.data.children[3].id, '}');
+
+	const size_t len = 2048;
+	const size_t buf_size = len * 2 + 2;
+	char buf[buf_size + 1];
+	memset(buf, buf_size + 1, '\0');
+	buf[0] = '{';
+	size_t i;
+	for (i = 1; i < buf_size - 1;)
+	{
+		buf[i++] = 'p';
+		buf[i++] = ';';
+	}
+	buf[i - 1] = '}';
+	buf[i] = '\0';
+    rest = parse_command(buf, &command);
+    cr_expect_str_empty(rest);
+    cr_expect_eq(command.id, '{');
+    for (size_t i = 0; i < len - 1; i++)
+        cr_expect_eq(command.data.children[i].id, 'p');
+    cr_expect_eq(command.data.children[len].id, '}');
+    free(command.data.children);
+}
+
+Test(parse_command, error_list_extra_characters, .exit_code = 1)
+{
+    parse_command("{p p}", &command);
+}
+
+Test(parse_command, error_list_unmatched, .exit_code = 1)
+{
+    parse_command("{", &command);
+}
+
+Test(parse_command, error_list_unmatched_nested, .exit_code = 1)
+{
+    parse_command("{;p;p;{p;p;p};p;p", &command);
 }
