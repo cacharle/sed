@@ -178,17 +178,17 @@ parse_escapable_text(char *s, struct command *command)
     return s + 1;
 }
 
-static const size_t commands_realloc_size = 10;
+static const size_t script_realloc_size = 10;
 
 static char *
-parse_commands(char *s, struct command **commands, bool end_on_closing_brace)
+parse_script(char *s, script_t *script, bool end_on_closing_brace)
 {
     bool has_separator = false;
-    *commands = xmalloc(sizeof(struct command) * commands_realloc_size);
+    *script = xmalloc(sizeof(struct command) * script_realloc_size);
     size_t i = 0;
     for (i = 0; true; i++)
     {
-        s = parse_command(s, &(*commands)[i]);
+        s = parse_command(s, &(*script)[i]);
         if (s[-1] == '\0')
             has_separator = true;  // weird hack for parse*_text where the parser
                                    // replaces the separator with  a null character
@@ -200,14 +200,14 @@ parse_commands(char *s, struct command **commands, bool end_on_closing_brace)
         }
         if (end_on_closing_brace)
         {
-            if ((*commands)[i].id == '}')
+            if ((*script)[i].id == '}')
                 break;
             if (*s == '\0')
                 die("unmatched '{'");
         }
         else
         {
-            if ((*commands)[i].id == '}')
+            if ((*script)[i].id == '}')
                 die("unexpected '}'");
             if (*s == '\0')
                 break;
@@ -215,19 +215,19 @@ parse_commands(char *s, struct command **commands, bool end_on_closing_brace)
         if (*s != '{' && *s != '}' && !has_separator)
             die("extra characters after command");
         has_separator = false;
-        if ((*commands)[i].id == COMMAND_LAST)
+        if ((*script)[i].id == COMMAND_LAST)
             i--;
-        if ((i + 1) % commands_realloc_size == 0)
+        if ((i + 1) % script_realloc_size == 0)
         {
-            size_t slots = (i / commands_realloc_size) + 2;
-            *commands = xrealloc(
-                *commands, sizeof(struct command) * (slots * commands_realloc_size));
+            size_t slots = (i / script_realloc_size) + 2;
+            *script = xrealloc(
+                *script, sizeof(struct command) * (slots * script_realloc_size));
         }
     }
     if (!end_on_closing_brace)
     {
-        *commands = xrealloc(*commands, sizeof(struct command) * (i + 2));
-        (*commands)[i + 1].id = COMMAND_LAST;
+        *script = xrealloc(*script, sizeof(struct command) * (i + 2));
+        (*script)[i + 1].id = COMMAND_LAST;
     }
     return s;
 }
@@ -235,7 +235,7 @@ parse_commands(char *s, struct command **commands, bool end_on_closing_brace)
 static char *
 parse_list(char *s, struct command *command)
 {
-    return parse_commands(s, &command->data.children, true);
+    return parse_script(s, &command->data.children, true);
 }
 
 static char *
@@ -359,10 +359,10 @@ parse_command(char *s, struct command *command)
     return command_info->func(s, command);
 }
 
-struct command *
+script_t
 parse(char *s)
 {
-    struct command *commands = NULL;
-    (void)parse_commands(s, &commands, false);
-    return commands;
+    script_t script = NULL;
+    (void)parse_script(s, &script, false);
+    return script;
 }

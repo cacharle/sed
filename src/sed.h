@@ -39,31 +39,35 @@ typedef void (*command_function)(void);
 
 #define COMMAND_LAST -1
 
+union command_data
+{
+    char *          text;
+    struct command *children;
+    struct
+    {
+        regex_t preg;
+        char *  replacement;
+        size_t  occurence_index;
+        bool    global;
+        bool    print;
+        char *  write_filepath;
+    } substitute;
+    struct
+    {
+        char *from;
+        char *to;
+    } translate;
+};
+
 struct command
 {
-    char             id;
-    bool             inverse;
-    struct addresses addresses;
-    union
-    {
-        char *          text;
-        struct command *children;
-        struct
-        {
-            regex_t preg;
-            char *  replacement;
-            size_t  occurence_index;
-            bool    global;
-            bool    print;
-            char *  write_filepath;
-        } substitute;
-        struct
-        {
-            char *from;
-            char *to;
-        } translate;
-    } data;
+    char               id;
+    bool               inverse;
+    struct addresses   addresses;
+    union command_data data;
 };
+
+typedef struct command *script_t;
 
 // utils.c
 void *
@@ -75,7 +79,9 @@ strjoinf(char *origin, ...);
 char *
 read_file(char *filepath);
 void
-die(char *fmt, ...);
+put_error(const char *format, ...);
+void
+die(const char *format, ...);
 
 // parse.c
 char *
@@ -86,5 +92,9 @@ char *
 parse_command(char *s, struct command *command);
 struct command *
 parse(char *s);
+
+// exec.c
+void
+exec_command(struct command *command);
 
 #endif

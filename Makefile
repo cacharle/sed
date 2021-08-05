@@ -35,7 +35,7 @@ test: CCFLAGS += --coverage -g
 test: $(TEST_NAME)
 
 test_run: test
-	./$(TEST_NAME) -j4 2>&1 | sed '/^sed:.*/d'
+	./$(TEST_NAME) -j1 2>&1 | sed '/^sed:.*/d'
 
 $(TEST_NAME): $(OBJDIR) $(TEST_OBJDIR) $(TEST_OBJ)
 	$(CC) $(TEST_LDFLAGS) $(TEST_OBJ) -o $@
@@ -60,6 +60,6 @@ format:
 	clang-format -i $(SRC) $(INCLUDE) $(TEST_SRC)
 
 report: test_run
-	gcovr
+	gcovr -e 'test/test_.*\.c'
 
 .PHONY: all clean re test format

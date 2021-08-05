@@ -1,27 +1,5 @@
 #include "sed.h"
 
-void
-function_append(void)
-{
-}
-void
-function_insert(void)
-{
-}
-
-command_function command_functions_lookup[] = {
-    ['a'] = function_append,
-    ['i'] = function_insert,
-};
-
-#define CHAR_SPACE_MAX 20480
-// need under buffer for implementation of the 'x' command (can't swap array aka
-// constant pointers)
-static char  pattern_space_under[CHAR_SPACE_MAX + 1] = {'\0'};
-static char  hold_space_under[CHAR_SPACE_MAX + 1] = {'\0'};
-static char *pattern_space = pattern_space_under;
-static char *hold_space = hold_space_under;
-
 static bool auto_print = true;
 
 char *script_string = NULL;
@@ -51,17 +29,7 @@ main(int argc, char *argv[])
             die("missing script");
         script_string = argv[optind];
     }
-
-    struct command *script = parse(script_string);
-
-    /* struct command command; */
-    /* parse_command(script_string, &command); */
-    /*  */
-    /* printf("%d\n", command.addresses.count); */
-    /* printf("%d\n", command.inverse); */
-    /* printf("%s\n", command.data.text); */
-
-    /* script = parse_script(script_string); */
-
+    script_t script = parse(script_string);
+    exec(argv + optind, argc - optind, script);
     return 0;
 }

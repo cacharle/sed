@@ -81,14 +81,29 @@ read_file(char *filepath)
     return ret;
 }
 
+static void
+vput_error(const char *format, va_list ap)
+{
+    fputs("sed: ", stderr);
+    vfprintf(stderr, format, ap);
+    fputc('\n', stderr);
+}
+
 void
-die(char *fmt, ...)
+put_error(const char *format, ...)
 {
     va_list ap;
-    va_start(ap, fmt);
-    fputs("sed: ", stderr);
-    vfprintf(stderr, fmt, ap);
-    fputc('\n', stderr);
+    va_start(ap, format);
+    vput_error(format, ap);
+    va_end(ap);
+}
+
+void
+die(const char *format, ...)
+{
+    va_list ap;
+    va_start(ap, format);
+    vput_error(format, ap);
     va_end(ap);
     exit(1);
 }
