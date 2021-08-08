@@ -90,12 +90,49 @@ Test(exec_command, exchange)
     _debug_exec_set_pattern_space("foo");
     _debug_exec_set_hold_space("bar");
     exec_command(&command);
-    cr_assert_str_eq("bar", _debug_exec_pattern_space());
-    cr_assert_str_eq("foo", _debug_exec_hold_space());
+    cr_assert_str_eq(_debug_exec_pattern_space(), "bar");
+    cr_assert_str_eq(_debug_exec_hold_space(), "foo");
     exec_command(&command);
-    cr_assert_str_eq("foo", _debug_exec_pattern_space());
-    cr_assert_str_eq("bar", _debug_exec_hold_space());
+    cr_assert_str_eq(_debug_exec_pattern_space(), "foo");
+    cr_assert_str_eq(_debug_exec_hold_space(), "bar");
     exec_command(&command);
-    cr_assert_str_eq("bar", _debug_exec_pattern_space());
-    cr_assert_str_eq("foo", _debug_exec_hold_space());
+    cr_assert_str_eq(_debug_exec_pattern_space(), "bar");
+    cr_assert_str_eq(_debug_exec_hold_space(), "foo");
 }
+
+Test(exec_command, translate)
+{
+    command.id = 'y';
+    command.data.translate.from = "ABC";
+    command.data.translate.to = "DEF";
+    _debug_exec_set_pattern_space("ABCfooAbarBbazCABC");
+    exec_command(&command);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "DEFfooDbarEbazFDEF");
+
+    command.data.translate.from = "";
+    command.data.translate.to = "";
+    _debug_exec_set_pattern_space("fooAbarBbazC");
+    exec_command(&command);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "fooAbarBbazC");
+
+    command.data.translate.from = "\n\t\r";
+    command.data.translate.to = "ABC";
+    _debug_exec_set_pattern_space("foo\nbar\tbaz\r");
+    exec_command(&command);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "fooAbarBbazC");
+}
+
+/* Test(current_file, base) */
+/* { */
+/* 	cr_redirect_stdin(); */
+/* 	fputs("bonjour", stdin); */
+/* 	char *filepaths[] = {}; */
+/* 	size_t filepaths_len = 0; */
+/* 	FILE *file = NULL; */
+/* 	file = current_file(); */
+/* 	cr_asser_eq(file, stdin); */
+/* 	while (fgetc(stdin) != EOF) */
+/* 		; */
+/* 	file = current_file(); */
+/* 	cr_asser_eq(file, NULL); */
+/* } */

@@ -7,8 +7,6 @@ static char   pattern_space_under[CHAR_SPACE_MAX + 1] = {'\0'};
 static char   hold_space_under[CHAR_SPACE_MAX + 1] = {'\0'};
 static char * pattern_space = pattern_space_under;
 static char * hold_space = hold_space_under;
-static char * line = NULL;
-static size_t line_size = 0;
 static size_t line_index = 0;
 
 void
@@ -81,7 +79,20 @@ exec_exchange()
     pattern_space = tmp;
 }
 
-typedef void (*exec_func)(union command_data *);
+void
+exec_translate(struct command *command)
+{
+    char *from = command->data.translate.from;
+    for (size_t i = 0; pattern_space[i] != '\0'; i++)
+    {
+        char *from_found = strchr(from, pattern_space[i]);
+        if (from_found == NULL)
+            continue;
+        pattern_space[i] = command->data.translate.to[from_found - from];
+    }
+}
+
+typedef void (*exec_func)(struct command *);
 
 static const exec_func exec_func_lookup[] = {
     ['{'] = NULL,
@@ -110,7 +121,7 @@ static const exec_func exec_func_lookup[] = {
     ['='] = NULL,
     ['#'] = NULL,
     ['s'] = NULL,
-    ['y'] = NULL,
+    ['y'] = exec_translate,
 };
 
 void
@@ -125,50 +136,84 @@ exec_line(char *line, script_t commands)
     for (size_t i = 0; commands[i].id != COMMAND_LAST; i++)
     {
         exec_command(&commands[i]);
+        /* next_cycle(); */
     }
 }
 
+static char * filepaths_stdin_only[] = {"-"};
+static char **filepaths = NULL;
+static size_t filepaths_len = 0;
+
 void
-exec_file(FILE *file, script_t commands)
+exec_init(char **local_filepaths, size_t local_filepaths_len)
 {
-    while (getline(&line, &line_size, file))
-    {
-        line_index++;
-        exec_line(line, commands);
-    }
+    filepaths = local_filepaths;
+    filepaths_len = local_filepaths_len;
+    if (local_filepaths_len == 0)
+        filepaths = filepaths_stdin_only;
 }
 
-static const size_t line_init_size = 4098;
-
 void
-exec(char *filepaths[], int filepaths_len, script_t commands)
+exec(char *local_filepaths[], size_t local_filepaths_len, script_t commands)
 {
-    line_size = line_init_size;
-    line = xmalloc(sizeof(char) * line_size);
-    if (filepaths_len == 0)
+    exec_init(local_filepaths, local_filepaths_len);
+    // run
+}
+
+FILE *
+current_file(void)
+{
+    static size_t filepaths_index = 0;
+    static FILE * file = NULL;
+
+    if (file != NULL && !feof(file))
+        return file;
+    if (filepaths_index == filepaths_len - 1 && feof(file))
+        return NULL;
+    if (file != NULL && file != stdin)
+        fclose(file);
+    if (file != NULL)
+        filepaths_index++;
+    char *filepath = filepaths[filepaths_index];
+    if (strcmp(filepath, "-") == 0)
+        file = stdin;
+    else
     {
-        exec_file(stdin, commands);
-        return;
-    }
-    for (int i = 0; i < filepaths_len; i++)
-    {
-        FILE *file = NULL;
-        if (strcmp(filepaths[i], "-") == 0)
-            file = stdin;
-        else
+        file = fopen(filepath, "r");
+        if (file == NULL)
         {
-            file = fopen(filepaths[i], "r");
-            if (file == NULL)
-                put_error("can't read %s: %s", filepaths[i], strerror(errno));
+            put_error("can't read %s: %s", filepath, strerror(errno));
+            return current_file();
         }
-        exec_file(file, commands);
-        if (file != stdin)
-            fclose(file);
     }
-    free(line);
+    return file;
+}
+
+static const size_t line_size_init = 4098;
+
+char *
+next_cycle(void)
+{
+    static size_t line_size = line_size_init;
+    static char * line = NULL;
+    if (line == NULL)
+        line = xmalloc(sizeof(char) * line_size);
+    FILE *file = current_file();
+    if (file == NULL)
+    {
+        free(line);
+        return NULL;
+    }
+    errno = 0;
+    if (getline(&line, &line_size, file) == -1 && errno != 0)
+        die("error getline: %s", strerror(errno));
+    line_index++;
+    strcpy(pattern_space, line);
+    return line;
 }
 
 /*****************************************************************************/
+/* debug fonctions used to access global variables during testing */
 
 char *
 _debug_exec_pattern_space(void)
