@@ -11,30 +11,6 @@ static char * line = NULL;
 static size_t line_size = 0;
 static size_t line_index = 0;
 
-char *
-_debug_exec_pattern_space(void)
-{
-    return pattern_space;
-}
-
-char *
-_debug_exec_hold_space(void)
-{
-    return hold_space;
-}
-
-char *
-_debug_exec_set_pattern_space(const char *content)
-{
-    return strcpy(pattern_space, content);
-}
-
-char *
-_debug_exec_set_hold_space(const char *content)
-{
-    return strcpy(hold_space, content);
-}
-
 void
 exec_delete()
 {
@@ -44,11 +20,15 @@ exec_delete()
 void
 exec_delete_newline()
 {
-    size_t newline_index = strcspn(pattern_space, "\n");
-    char * after = pattern_space + newline_index;
-    memmove(pattern_space, after, strlen(after));
-    if (pattern_space[0] != '\0')
-        ;  // don't start a new cycle
+    char *newline = strchr(pattern_space, '\n');
+    if (newline == NULL)
+    {
+        exec_delete();
+        return;
+    }
+    memmove(pattern_space, newline + 1, strlen(newline + 1) + 1);
+    if (pattern_space[0] == '\0')
+        ;  // load new line
 }
 
 void
@@ -60,8 +40,9 @@ exec_replace_pattern_by_hold()
 void
 exec_append_pattern_by_hold()
 {
-    strcat(pattern_space, "\n");
-    strcat(pattern_space, hold_space);
+    char *pattern_space_end = pattern_space + strlen(pattern_space);
+    strcat(pattern_space_end, "\n");
+    strcat(pattern_space_end, hold_space);
 }
 
 void
@@ -73,8 +54,9 @@ exec_replace_hold_by_pattern()
 void
 exec_append_hold_by_pattern()
 {
-    strcat(hold_space, "\n");
-    strcat(hold_space, pattern_space);
+    char *hold_space_end = hold_space + strlen(hold_space);
+    strcat(hold_space_end, "\n");
+    strcat(hold_space_end, pattern_space);
 }
 
 void
@@ -102,18 +84,39 @@ exec_exchange()
 typedef void (*exec_func)(union command_data *);
 
 static const exec_func exec_func_lookup[] = {
-    ['{'] = NULL, ['}'] = NULL, ['a'] = NULL,          ['c'] = NULL,
-    ['i'] = NULL, [':'] = NULL, ['b'] = NULL,          ['t'] = NULL,
-    ['r'] = NULL, ['w'] = NULL, ['d'] = exec_delete,   ['D'] = exec_delete_newline,
-    ['g'] = NULL, ['G'] = NULL, ['h'] = NULL,          ['H'] = NULL,
-    ['l'] = NULL, ['n'] = NULL, ['N'] = NULL,          ['p'] = exec_print,
-    ['P'] = NULL, ['q'] = NULL, ['x'] = exec_exchange, ['='] = NULL,
-    ['#'] = NULL, ['s'] = NULL, ['y'] = NULL};
+    ['{'] = NULL,
+    ['}'] = NULL,
+    ['a'] = NULL,
+    ['c'] = NULL,
+    ['i'] = NULL,
+    [':'] = NULL,
+    ['b'] = NULL,
+    ['t'] = NULL,
+    ['r'] = NULL,
+    ['w'] = NULL,
+    ['d'] = exec_delete,
+    ['D'] = exec_delete_newline,
+    ['g'] = exec_replace_pattern_by_hold,
+    ['G'] = exec_append_pattern_by_hold,
+    ['h'] = exec_replace_hold_by_pattern,
+    ['H'] = exec_append_hold_by_pattern,
+    ['l'] = NULL,
+    ['n'] = NULL,
+    ['N'] = NULL,
+    ['p'] = exec_print,
+    ['P'] = NULL,
+    ['q'] = NULL,
+    ['x'] = exec_exchange,
+    ['='] = NULL,
+    ['#'] = NULL,
+    ['s'] = NULL,
+    ['y'] = NULL,
+};
 
 void
 exec_command(struct command *command)
 {
-    (exec_func_lookup[command->id])(command);
+    (exec_func_lookup[(size_t)command->id])(command);
 }
 
 void
@@ -163,4 +166,30 @@ exec(char *filepaths[], int filepaths_len, script_t commands)
             fclose(file);
     }
     free(line);
+}
+
+/*****************************************************************************/
+
+char *
+_debug_exec_pattern_space(void)
+{
+    return pattern_space;
+}
+
+char *
+_debug_exec_hold_space(void)
+{
+    return hold_space;
+}
+
+char *
+_debug_exec_set_pattern_space(const char *content)
+{
+    return strcpy(pattern_space, content);
+}
+
+char *
+_debug_exec_set_hold_space(const char *content)
+{
+    return strcpy(hold_space, content);
 }

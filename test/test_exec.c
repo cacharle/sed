@@ -41,35 +41,47 @@ Test(exec_command, delete_newline)
     cr_assert_str_empty(_debug_exec_pattern_space());
     _debug_exec_set_pattern_space("foo\nbar\nbaz");
     exec_command(&command);
-    cr_assert_str_eq("bar\nbaz\n", _debug_exec_pattern_space());
+    cr_assert_str_eq(_debug_exec_pattern_space(), "bar\nbaz");
 }
 
 Test(exec_command, exec_replace_pattern_by_hold)
 {
     command.id = 'g';
     _debug_exec_set_pattern_space("foo");
+    _debug_exec_set_hold_space("bar");
     exec_command(&command);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "bar");
+    cr_assert_str_eq(_debug_exec_hold_space(), "bar");
 }
 
 Test(exec_command, exec_append_pattern_by_hold)
 {
     command.id = 'G';
     _debug_exec_set_pattern_space("foo");
+    _debug_exec_set_hold_space("bar");
     exec_command(&command);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "foo\nbar");
+    cr_assert_str_eq(_debug_exec_hold_space(), "bar");
 }
 
 Test(exec_command, exec_replace_hold_by_pattern)
 {
     command.id = 'h';
     _debug_exec_set_pattern_space("foo");
+    _debug_exec_set_hold_space("bar");
     exec_command(&command);
+    cr_assert_str_eq(_debug_exec_hold_space(), "foo");
+    cr_assert_str_eq(_debug_exec_pattern_space(), "foo");
 }
 
 Test(exec_command, exec_append_hold_by_pattern)
 {
     command.id = 'H';
     _debug_exec_set_pattern_space("foo");
+    _debug_exec_set_hold_space("bar");
     exec_command(&command);
+    cr_assert_str_eq(_debug_exec_hold_space(), "bar\nfoo");
+    cr_assert_str_eq(_debug_exec_pattern_space(), "foo");
 }
 
 Test(exec_command, exchange)
