@@ -10,6 +10,23 @@ static char * hold_space = hold_space_under;
 static size_t line_index = 0;
 
 void
+exec_insert(union command_data *data)
+{
+    fputs(data->text, stdout);
+}
+
+void
+exec_read_file(union command_data *data)
+{
+    FILE *file = fopen(data->text, "r");
+    if (file == NULL)
+        return;
+    char c;
+    while ((c = fgetc(file)) != EOF)
+        fputc(c, stdout);
+}
+
+void
 exec_delete()
 {
     pattern_space[0] = '\0';
@@ -65,7 +82,7 @@ exec_print(union command_data *data)
 }
 
 void
-exec_print_no_newline()
+exec_print_until_newline()
 {
     size_t newline_index = strcspn(pattern_space, "\n");
     fwrite(pattern_space, sizeof(*pattern_space), newline_index, stdout);
@@ -80,30 +97,49 @@ exec_exchange()
 }
 
 void
-exec_translate(struct command *command)
+exec_translate(union command_data *data)
 {
-    char *from = command->data.translate.from;
+    char *from = data->translate.from;
     for (size_t i = 0; pattern_space[i] != '\0'; i++)
     {
         char *from_found = strchr(from, pattern_space[i]);
         if (from_found == NULL)
             continue;
-        pattern_space[i] = command->data.translate.to[from_found - from];
+        pattern_space[i] = data->translate.to[from_found - from];
     }
 }
 
-typedef void (*exec_func)(struct command *);
+void
+exec_substitute(union command_data *data)
+{
+    if (data->substitute.occurence_index == 0)
+        data->substitute.occurence_index = 1;
+    char *     space = pattern_space;
+    regmatch_t match;
+    for (size_t occurence = 1;
+         regexec(&data->substitute.preg, space, 1, &match, 0) == 0;
+         occurence++)
+    {
+        if (occurence >= data->substitute.occurence_index)
+        {
+            if (!data->substitute.global)
+                break;
+        }
+    }
+}
+
+typedef void (*exec_func)(union command_data *data);
 
 static const exec_func exec_func_lookup[] = {
     ['{'] = NULL,
     ['}'] = NULL,
     ['a'] = NULL,
     ['c'] = NULL,
-    ['i'] = NULL,
+    ['i'] = exec_insert,
     [':'] = NULL,
     ['b'] = NULL,
     ['t'] = NULL,
-    ['r'] = NULL,
+    ['r'] = exec_read_file,
     ['w'] = NULL,
     ['d'] = exec_delete,
     ['D'] = exec_delete_newline,
@@ -115,19 +151,19 @@ static const exec_func exec_func_lookup[] = {
     ['n'] = NULL,
     ['N'] = NULL,
     ['p'] = exec_print,
-    ['P'] = NULL,
+    ['P'] = exec_print_until_newline,
     ['q'] = NULL,
     ['x'] = exec_exchange,
     ['='] = NULL,
     ['#'] = NULL,
-    ['s'] = NULL,
+    ['s'] = exec_substitute,
     ['y'] = exec_translate,
 };
 
 void
 exec_command(struct command *command)
 {
-    (exec_func_lookup[(size_t)command->id])(command);
+    (exec_func_lookup[(size_t)command->id])(&command->data);
 }
 
 void

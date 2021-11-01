@@ -471,7 +471,10 @@ Test(parse_command, substitute)
     cr_expect_eq(regexec(&command.data.substitute.preg, "bccc", 0, NULL, 0),
                  REG_NOMATCH);
 
-    rest = parse_command(strcpy(input, "s/x/\\&\\1\\2\\3\\4\\5\\6\\7\\8\\9\\0/"),
+    rest = parse_command(strcpy(input,
+                                "s/"
+                                "\\(1\\)\\(2\\)\\(3\\)\\(4\\)\\(5\\)\\(6\\)\\(7\\)"
+                                "\\(8\\)\\(9\\)/\\&\\1\\2\\3\\4\\5\\6\\7\\8\\9\\0/"),
                          &command);
     cr_expect_str_empty(rest);
     cr_expect_eq(command.id, 's');
@@ -573,6 +576,16 @@ Test(parse_command, substitute_flags_error_occurence_index_overflow, .exit_code 
                          "99999"
                          "99999999999999999999999w bonjour"),
                   &command);
+}
+
+Test(parse_command, substitute_group_index_error, .exit_code = 1)
+{
+    parse_command(strcpy(input, "s/\\(ab\\)c*/\\2/"), &command);
+}
+
+Test(parse_command, substitute_group_index_none_error, .exit_code = 1)
+{
+    parse_command(strcpy(input, "s/abc*/\\1/"), &command);
 }
 
 Test(parse_command, substitute_flags_error_unknown_flag, .exit_code = 1)

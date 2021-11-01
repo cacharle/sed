@@ -1,5 +1,5 @@
 CC = gcc
-CCFLAGS = --std=c99 -Wall -Wextra -pedantic
+CCFLAGS = -std=c99 -Wall -Wextra -pedantic
 
 TEST_LDFLAGS = $(LDFLAGS) --coverage -lcriterion
 

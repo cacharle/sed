@@ -13,14 +13,87 @@ _debug_exec_pattern_space(void);
 
 struct command command;
 
-/* Test(exec_command, print) */
-/* { */
-/* 	command.id = 'p'; */
-/* 	cr_redirect_stdout(); */
-/* 	_debug_exec_set_pattern_space("bonjour\n"); */
-/* 	exec_command(&command); */
-/* 	cr_expect_stdout_eq_str("bonjour\n"); */
-/* } */
+Test(exec_command, insert)
+{
+    cr_redirect_stdout();
+    command.id = 'i';
+    command.data.text = "bonjour";
+    exec_command(&command);
+    fflush(stdout);
+    cr_expect_stdout_eq_str("bonjour");
+}
+
+Test(exec_command, read_file)
+{
+    char template[] = "/tmp/sed_testXXXXXX";
+    FILE *tmp_file = fdopen(mkstemp(template), "w+");
+    char *expected = "bonjourjesuis lala";
+    fputs(expected, tmp_file);
+    fclose(tmp_file);
+    cr_redirect_stdout();
+    command.id = 'r';
+    command.data.text = template;
+    exec_command(&command);
+    remove(template);
+    fflush(stdout);
+    cr_expect_stdout_eq_str(expected);
+}
+
+Test(exec_command, read_file_not_exist)
+{
+    cr_redirect_stdout();
+    command.id = 'r';
+    command.data.text = "/foo/bar/qux";
+    exec_command(&command);
+    fflush(stdout);
+    FILE * cr_stdout = cr_get_redirected_stdout();
+    char   buf[8] = {0};
+    size_t read_size = fread(buf, sizeof(char), 8, cr_stdout);
+    cr_expect_eq(read_size, 0);
+    // fix not released yet:
+    // https://github.com/Snaipe/Criterion/commit/ba21a4671f913e9c1c0c9a98bd285c64acf99847
+    /* cr_expect_stdout_eq_str(""); */
+}
+
+Test(exec_command, print_base)
+{
+    cr_redirect_stdout();
+    command.id = 'p';
+    _debug_exec_set_pattern_space("bonjour");
+    exec_command(&command);
+    fflush(stdout);
+    cr_expect_stdout_eq_str("bonjour");
+}
+
+Test(exec_command, print_with_newlines)
+{
+    cr_redirect_stdout();
+    command.id = 'p';
+    _debug_exec_set_pattern_space("bon\njour\n");
+    exec_command(&command);
+    fflush(stdout);
+    cr_expect_stdout_eq_str("bon\njour\n");
+}
+
+Test(exec_command, print_until_newline)
+{
+    command.id = 'P';
+    cr_redirect_stdout();
+    _debug_exec_set_pattern_space("bonj\nour\n");
+    exec_command(&command);
+    fflush(stdout);
+    cr_expect_stdout_eq_str("bonj");
+}
+
+Test(exec_command, print_until_newline_without_newline)
+{
+    command.id = 'P';
+    cr_redirect_stdout();
+    _debug_exec_set_pattern_space("bonjour");
+    exec_command(&command);
+    fflush(stdout);
+    cr_expect_stdout_eq_str("bonjour");
+}
 
 Test(exec_command, delete)
 {
@@ -121,6 +194,16 @@ Test(exec_command, translate)
     exec_command(&command);
     cr_assert_str_eq(_debug_exec_pattern_space(), "fooAbarBbazC");
 }
+
+/* Test(exec_command, substitute) */
+/* { */
+/*     command.id = 's'; */
+/* 	assert(regcomp(&command.data.substitute.preg, "abc*", 0) == 0); */
+/* 	command.data.substitute.replacement = "foo"; */
+/*     _debug_exec_set_pattern_space("abccccc"); */
+/*     exec_command(&command); */
+/*     cr_assert_str_eq(_debug_exec_pattern_space(), "foo"); */
+/* } */
 
 /* Test(current_file, base) */
 /* { */

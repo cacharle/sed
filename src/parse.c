@@ -259,8 +259,15 @@ parse_substitute(char *s, struct command *command)
     s = extract_delimited(
         s, &regex, &command->data.substitute.replacement, "'s' command");
     xregcomp(&command->data.substitute.preg, regex, 0);
-    replace_escape_sequence_reject(command->data.substitute.replacement,
-                                   "&0123456789");
+    char *replacement = command->data.substitute.replacement;
+    replace_escape_sequence_reject(replacement, "&0123456789");
+    for (size_t i = 0; replacement[i] != '\0'; i++)
+    {
+        if (replacement[i] == '\\' && isdigit(replacement[i + 1]) &&
+            (size_t)(replacement[i + 1] - '0') >
+                command->data.substitute.preg.re_nsub)
+            die("invalid reference \\%c on 's' command's RHS", replacement[i + 1]);
+    }
     command->data.substitute.occurence_index = 0;
     command->data.substitute.global = false;
     command->data.substitute.print = false;

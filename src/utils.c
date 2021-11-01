@@ -84,9 +84,9 @@ read_file(char *filepath)
 static void
 vput_error(const char *format, va_list ap)
 {
-    fputs("sed: ", stderr);
-    vfprintf(stderr, format, ap);
-    fputc('\n', stderr);
+    /* fputs("sed: ", stderr); */
+    /* vfprintf(stderr, format, ap); */
+    /* fputc('\n', stderr); */
 }
 
 void
@@ -105,5 +105,5 @@ die(const char *format, ...)
     va_start(ap, format);
     vput_error(format, ap);
     va_end(ap);
-    exit(1);
+    exit(EXIT_FAILURE);
 }
