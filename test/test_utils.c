@@ -34,3 +34,19 @@ Test(read_file, error, .exit_code = 1)
 {
     read_file("doesnotexist");
 }
+
+Test(todigit, base)
+{
+    cr_assert_eq(todigit('0'), 0);
+    cr_assert_eq(todigit('1'), 1);
+    cr_assert_eq(todigit('2'), 2);
+    cr_assert_eq(todigit('3'), 3);
+    cr_assert_eq(todigit('4'), 4);
+    cr_assert_eq(todigit('5'), 5);
+    cr_assert_eq(todigit('5'), 5);
+    cr_assert_eq(todigit('6'), 6);
+    cr_assert_eq(todigit('8'), 8);
+    cr_assert_eq(todigit('9'), 9);
+    cr_assert_eq(todigit('a'), -1);
+    cr_assert_eq(todigit('~'), -1);
+}
