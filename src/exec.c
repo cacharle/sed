@@ -264,7 +264,7 @@ next_cycle(void)
     return line;
 }
 
-/*****************************************************************************/
+/******************************************************************/
 /* debug fonctions used to access global variables during testing */
 
 char *

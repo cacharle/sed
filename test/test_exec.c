@@ -196,15 +196,15 @@ Test(exec_command, translate)
     cr_assert_str_eq(_debug_exec_pattern_space(), "fooAbarBbazC");
 }
 
-// Test(exec_command, substitute)
-// {
-//     command.id = 's';
-//     assert(regcomp(&command.data.substitute.preg, "abc*", 0) == 0);
-//     command.data.substitute.replacement = "foo";
-//     _debug_exec_set_pattern_space("abccccc");
-//     exec_command(&command);
-//     cr_assert_str_eq(_debug_exec_pattern_space(), "foo");
-// }
+Test(exec_command, substitute)
+{
+    command.id = 's';
+    assert(regcomp(&command.data.substitute.preg, "abc*", 0) == 0);
+    command.data.substitute.replacement = "foo";
+    _debug_exec_set_pattern_space("abccccc");
+    exec_command(&command);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "foo");
+}
 
 /* Test(current_file, base) */
 /* { */

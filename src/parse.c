@@ -14,6 +14,9 @@ str_left_shift(char *s)
     return memmove(s, s + 1, strlen(s));
 }
 
+// Replace the next delimiter character by '\0' to cut the string
+// Also handles escaped delimiter
+// Returns a pointer to the character after the cut.
 static char *
 delimited_cut(char *s, char delim, const char *error_id)
 {
@@ -28,6 +31,10 @@ delimited_cut(char *s, char delim, const char *error_id)
     return s + 1;
 }
 
+// Extracts two strings separated by a delimiter character.
+// e.g "/abc/def/" -> ("abc", "def")
+// The first character of the string is the delimiter.
+// If extracted2 is NULL, only tries to extract the first group between delimiter.
 static char *
 extract_delimited(char       *s,
                   char      **extracted1,
@@ -65,6 +72,9 @@ static const char  escape_lookup[] = {
      ['f'] = '\f',
 };
 
+// Handle escaped special characters (tabs, newline, etc...)
+// by replacing them by the litteral character code.
+// Replace all other characters (EXCEPT the ones in `reject` param) by the character itself
 static void
 replace_escape_sequence_reject(char *s, const char *reject)
 {
@@ -100,6 +110,10 @@ xregcomp(regex_t *preg, const char *regex, int cflags)
 
 static const char *available_commands = "{}aci:btrwdDgGhHlnNpPqx=#sy";
 
+// Parse an address (place where a command will be executed)
+// '$'     -> end of file
+// number  -> a specific line
+// #regex# -> everyline that maches a regex
 char *
 parse_address(char *s, struct address *address)
 {
@@ -125,6 +139,8 @@ parse_address(char *s, struct address *address)
     return s;
 }
 
+// A command can have 0, 1 or 2 addresses.
+// If there is 2, the command will be executed on all line between those addresses
 char *
 parse_addresses(char *s, struct addresses *addresses)
 {
@@ -153,6 +169,7 @@ parse_singleton(char *s, struct command *command)
     return s;
 }
 
+// Parse a command that takes arbitrary text as an argument
 static char *
 parse_text(char *s, struct command *command)
 {
@@ -164,6 +181,7 @@ parse_text(char *s, struct command *command)
     return s + 1;
 }
 
+// Parse a command that takes arbitrary *escapable* text as an argument
 static char *
 parse_escapable_text(char *s, struct command *command)
 {
@@ -238,6 +256,8 @@ parse_list(char *s, struct command *command)
     return parse_script(s, &command->data.children, true);
 }
 
+// Parse the translate command (`y`)
+// e.g y/abc/def/
 static char *
 parse_translate(char *s, struct command *command)
 {
@@ -252,6 +272,8 @@ parse_translate(char *s, struct command *command)
     return s;
 }
 
+// Parse the substitute command (`s`)
+// e.g s/abc/def/[optional flags]
 static char *
 parse_substitute(char *s, struct command *command)
 {
