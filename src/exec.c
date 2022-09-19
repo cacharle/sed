@@ -5,8 +5,8 @@
 // constant pointers)
 static char   pattern_space_under[CHAR_SPACE_MAX + 1] = {'\0'};
 static char   hold_space_under[CHAR_SPACE_MAX + 1] = {'\0'};
-static char * pattern_space = pattern_space_under;
-static char * hold_space = hold_space_under;
+static char  *pattern_space = pattern_space_under;
+static char  *hold_space = hold_space_under;
 static size_t line_index = 0;
 
 void
@@ -109,22 +109,38 @@ exec_translate(union command_data *data)
     }
 }
 
+#define SUBSTITUTE_NMATCH 8
+
 void
 exec_substitute(union command_data *data)
 {
     if (data->substitute.occurence_index == 0)
         data->substitute.occurence_index = 1;
-    char *     space = pattern_space;
-    regmatch_t match;
+    char      *space = pattern_space;
+    regmatch_t pmatch[SUBSTITUTE_NMATCH + 1];
     for (size_t occurence = 1;
-         regexec(&data->substitute.preg, space, 1, &match, 0) == 0;
+         *space != '\0' &&
+         regexec(&data->substitute.preg, space, SUBSTITUTE_NMATCH, pmatch, 0) == 0;
          occurence++)
     {
         if (occurence >= data->substitute.occurence_index)
         {
+            for (char *r = data->substitute.replacement; *r != '\0'; r++)
+            {
+                size_t group = -1;
+                if (*r == '&')
+                    group = 0;
+                else if (r[0] == '\\' && isdigit(r[1]))
+                {
+                    group = r[1] - '0';
+                    r++;
+                }
+                // regmatch_t match
+            }
             if (!data->substitute.global)
                 break;
         }
+        space += pmatch[0].rm_eo;
     }
 }
 
@@ -176,7 +192,7 @@ exec_line(char *line, script_t commands)
     }
 }
 
-static char * filepaths_stdin_only[] = {"-"};
+static char  *filepaths_stdin_only[] = {"-"};
 static char **filepaths = NULL;
 static size_t filepaths_len = 0;
 
@@ -200,7 +216,7 @@ FILE *
 current_file(void)
 {
     static size_t filepaths_index = 0;
-    static FILE * file = NULL;
+    static FILE  *file = NULL;
 
     if (file != NULL && !feof(file))
         return file;
@@ -231,7 +247,7 @@ char *
 next_cycle(void)
 {
     static size_t line_size = line_size_init;
-    static char * line = NULL;
+    static char  *line = NULL;
     if (line == NULL)
         line = xmalloc(sizeof(char) * line_size);
     FILE *file = current_file();

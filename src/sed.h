@@ -41,16 +41,16 @@ typedef void (*command_function)(void);
 
 union command_data
 {
-    char *          text;
+    char           *text;
     struct command *children;
     struct
     {
         regex_t preg;
-        char *  replacement;
+        char   *replacement;
         size_t  occurence_index;
         bool    global;
         bool    print;
-        char *  write_filepath;
+        char   *write_filepath;
     } substitute;
     struct
     {
@@ -82,6 +82,8 @@ void
 put_error(const char *format, ...);
 void
 die(const char *format, ...);
+int
+todigit(int c);
 
 // parse.c
 char *

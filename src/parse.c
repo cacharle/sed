@@ -29,9 +29,9 @@ delimited_cut(char *s, char delim, const char *error_id)
 }
 
 static char *
-extract_delimited(char *      s,
-                  char **     extracted1,
-                  char **     extracted2,
+extract_delimited(char       *s,
+                  char      **extracted1,
+                  char      **extracted2,
                   const char *error_id)
 {
     const char delim = *s;
@@ -58,11 +58,11 @@ strchr_newline_or_end(const char *s)
 
 static const char *available_escape = "tnrvf";
 static const char  escape_lookup[] = {
-    ['t'] = '\t',
-    ['n'] = '\n',
-    ['r'] = '\r',
-    ['v'] = '\v',
-    ['f'] = '\f',
+     ['t'] = '\t',
+     ['n'] = '\n',
+     ['r'] = '\r',
+     ['v'] = '\v',
+     ['f'] = '\f',
 };
 
 static void

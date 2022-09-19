@@ -5,3 +5,5 @@ sed_test
 *.gcda
 tags
 vgcore.*
+.cache
+compile_commands.json

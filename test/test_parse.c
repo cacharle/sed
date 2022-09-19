@@ -4,7 +4,7 @@
 static struct address   address;
 static struct addresses addresses;
 static struct command   command;
-static char *           rest;
+static char            *rest;
 static char             input[2048];
 
 Test(parse_address, last)

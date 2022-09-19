@@ -1,4 +1,5 @@
 #include "sed.h"
+#include <assert.h>
 #include <criterion/criterion.h>
 #include <criterion/redirect.h>
 
@@ -11,7 +12,7 @@ _debug_exec_hold_space(void);
 char *
 _debug_exec_pattern_space(void);
 
-struct command command;
+static struct command command;
 
 Test(exec_command, insert)
 {
@@ -46,7 +47,7 @@ Test(exec_command, read_file_not_exist)
     command.data.text = "/foo/bar/qux";
     exec_command(&command);
     fflush(stdout);
-    FILE * cr_stdout = cr_get_redirected_stdout();
+    FILE  *cr_stdout = cr_get_redirected_stdout();
     char   buf[8] = {0};
     size_t read_size = fread(buf, sizeof(char), 8, cr_stdout);
     cr_expect_eq(read_size, 0);
@@ -195,15 +196,15 @@ Test(exec_command, translate)
     cr_assert_str_eq(_debug_exec_pattern_space(), "fooAbarBbazC");
 }
 
-/* Test(exec_command, substitute) */
-/* { */
-/*     command.id = 's'; */
-/* 	assert(regcomp(&command.data.substitute.preg, "abc*", 0) == 0); */
-/* 	command.data.substitute.replacement = "foo"; */
-/*     _debug_exec_set_pattern_space("abccccc"); */
-/*     exec_command(&command); */
-/*     cr_assert_str_eq(_debug_exec_pattern_space(), "foo"); */
-/* } */
+// Test(exec_command, substitute)
+// {
+//     command.id = 's';
+//     assert(regcomp(&command.data.substitute.preg, "abc*", 0) == 0);
+//     command.data.substitute.replacement = "foo";
+//     _debug_exec_set_pattern_space("abccccc");
+//     exec_command(&command);
+//     cr_assert_str_eq(_debug_exec_pattern_space(), "foo");
+// }
 
 /* Test(current_file, base) */
 /* { */
