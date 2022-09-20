@@ -74,7 +74,8 @@ static const char  escape_lookup[] = {
 
 // Handle escaped special characters (tabs, newline, etc...)
 // by replacing them by the litteral character code.
-// Replace all other characters (EXCEPT the ones in `reject` param) by the character itself
+// Replace all other characters (EXCEPT the ones in `reject` param) by the character
+// itself
 static void
 replace_escape_sequence_reject(char *s, const char *reject)
 {

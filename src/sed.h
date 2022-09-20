@@ -35,8 +35,6 @@ struct addresses
     struct address addresses[2];
 };
 
-typedef void (*command_function)(void);
-
 #define COMMAND_LAST -1
 
 union command_data

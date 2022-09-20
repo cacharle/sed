@@ -1,4 +1,5 @@
 #include "sed.h"
+#include <stdlib.h>
 
 #define CHAR_SPACE_MAX 20480
 // need under buffer for implementation of the 'x' command (can't swap array aka
@@ -123,24 +124,52 @@ exec_substitute(union command_data *data)
          regexec(&data->substitute.preg, space, SUBSTITUTE_NMATCH, pmatch, 0) == 0;
          occurence++)
     {
-        if (occurence >= data->substitute.occurence_index)
+        printf("ENTER %d %d\n", occurence, data->substitute.occurence_index);
+        for (int i = 0; pmatch[i].rm_so != -1; i++)
         {
-            for (char *r = data->substitute.replacement; *r != '\0'; r++)
-            {
-                size_t group = -1;
-                if (*r == '&')
-                    group = 0;
-                else if (r[0] == '\\' && isdigit(r[1]))
-                {
-                    group = r[1] - '0';
-                    r++;
-                }
-                // regmatch_t match
-            }
-            if (!data->substitute.global)
-                break;
+            printf("match: %d -> %d\n", pmatch[i].rm_so, pmatch[i].rm_eo);
         }
-        space += pmatch[0].rm_eo;
+        printf("\n");
+        char *replacement = strdup(data->substitute.replacement);
+        for (char *r = replacement; *r != '\0'; r++)
+        {
+            printf("%c, ", *r);
+            size_t group = -1;
+            if (*r == '&')
+                group = 0;
+            else if (r[0] == '\\' && isdigit(r[1]))
+            {
+                group = todigit(r[1]);
+                memmove(r, r + 1, strlen(r + 1) + 1);
+            }
+            if (group == -1)
+                continue;
+            memmove(r, r + 1, strlen(r + 1) + 1);
+            if (pmatch[group].rm_so == -1 && pmatch[group].rm_eo == -1)
+                continue;
+            size_t group_len = pmatch[group].rm_eo - pmatch[group].rm_so;
+            size_t old_offset = r - replacement;
+            replacement = realloc(
+                replacement,
+                strlen(replacement) + group_len + 1);
+            r = replacement + old_offset;
+            memmove(r + group_len, r, strlen(r));
+            memcpy(r, space + pmatch[group].rm_so, group_len);
+            r += group_len;
+        }
+        printf("\n");
+
+        char  *dest = space + pmatch[0].rm_so;
+        char  *src = space + pmatch[0].rm_eo;
+        size_t replacement_len = strlen(data->substitute.replacement);
+        memmove(dest + replacement_len, src, strlen(src) + 1);
+        memcpy(dest, data->substitute.replacement, replacement_len);
+        if (!data->substitute.global &&
+            occurence == data->substitute.occurence_index)
+            break;
+        //     if (!data->substitute.global)
+        //         break;
+        space += replacement_len;
     }
 }
 

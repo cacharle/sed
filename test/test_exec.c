@@ -51,9 +51,7 @@ Test(exec_command, read_file_not_exist)
     char   buf[8] = {0};
     size_t read_size = fread(buf, sizeof(char), 8, cr_stdout);
     cr_expect_eq(read_size, 0);
-    // fix not released yet:
-    // https://github.com/Snaipe/Criterion/commit/ba21a4671f913e9c1c0c9a98bd285c64acf99847
-    /* cr_expect_stdout_eq_str(""); */
+    cr_expect_stdout_eq_str("");
 }
 
 Test(exec_command, print_base)
@@ -199,24 +197,46 @@ Test(exec_command, translate)
 Test(exec_command, substitute)
 {
     command.id = 's';
+    command.data.substitute.occurence_index = 0;
     assert(regcomp(&command.data.substitute.preg, "abc*", 0) == 0);
     command.data.substitute.replacement = "foo";
+
     _debug_exec_set_pattern_space("abccccc");
     exec_command(&command);
     cr_assert_str_eq(_debug_exec_pattern_space(), "foo");
+
+    _debug_exec_set_pattern_space("###abccccc###");
+    exec_command(&command);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "###foo###");
+
+    _debug_exec_set_pattern_space("###abccccc###abccc###");
+    exec_command(&command);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "###foo###abccc###");
 }
 
-/* Test(current_file, base) */
-/* { */
-/* 	cr_redirect_stdin(); */
-/* 	fputs("bonjour", stdin); */
-/* 	char *filepaths[] = {}; */
-/* 	size_t filepaths_len = 0; */
-/* 	FILE *file = NULL; */
-/* 	file = current_file(); */
-/* 	cr_asser_eq(file, stdin); */
-/* 	while (fgetc(stdin) != EOF) */
-/* 		; */
-/* 	file = current_file(); */
-/* 	cr_asser_eq(file, NULL); */
-/* } */
+Test(exec_command, substitute_regex_group)
+{
+    command.id = 's';
+    command.data.substitute.occurence_index = 0;
+    assert(regcomp(&command.data.substitute.preg, "\\(abc*\\)_\\(def*\\)", 0) == 0);
+    command.data.substitute.replacement = "[\\1]foo[\\2]";
+
+    _debug_exec_set_pattern_space("###abccc_defff###");
+    exec_command(&command);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "###[abccc]foo[defff]###");
+}
+
+// Test(current_file, base)
+// {
+// 	cr_redirect_stdin();
+// 	fputs("bonjour", stdin);
+// 	char *filepaths[] = {};
+// 	size_t filepaths_len = 0;
+// 	FILE *file = NULL;
+// 	file = current_file();
+// 	cr_asser_eq(file, stdin);
+// 	while (fgetc(stdin) != EOF)
+// 		;
+// 	file = current_file();
+// 	cr_asser_eq(file, NULL);
+// }
