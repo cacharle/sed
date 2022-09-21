@@ -1,5 +1,7 @@
 #include "sed.h"
 #include <stdlib.h>
+#include <assert.h>
+
 
 #define CHAR_SPACE_MAX 20480
 // need under buffer for implementation of the 'x' command (can't swap array aka
@@ -110,11 +112,12 @@ exec_translate(union command_data *data)
     }
 }
 
-#define SUBSTITUTE_NMATCH 8
+#define SUBSTITUTE_NMATCH 10
 
 void
 exec_substitute(union command_data *data)
 {
+    assert(data->substitute.preg.re_nsub <= SUBSTITUTE_NMATCH - 1);
     if (data->substitute.occurence_index == 0)
         data->substitute.occurence_index = 1;
     char      *space = pattern_space;
@@ -138,11 +141,14 @@ exec_substitute(union command_data *data)
             if (group == -1)
                 continue;
             memmove(r, r + 1, strlen(r + 1) + 1);
-            if (pmatch[group].rm_so == -1 && pmatch[group].rm_eo == -1)
+            if (pmatch[group].rm_so == -1 || pmatch[group].rm_eo == -1)
                 continue;
             size_t group_len = pmatch[group].rm_eo - pmatch[group].rm_so;
             size_t old_offset = r - replacement;
-            replacement = xrealloc(replacement, strlen(replacement) + group_len + 1);
+            replacement = xrealloc(
+                replacement,
+                strlen(replacement) + group_len + 1
+            );
             r = replacement + old_offset;
             memmove(r + group_len, r, strlen(r) + 1);
             memcpy(r, space + pmatch[group].rm_so, group_len);

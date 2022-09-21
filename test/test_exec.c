@@ -218,12 +218,23 @@ Test(exec_command, substitute_regex_group)
 {
     command.id = 's';
     command.data.substitute.occurence_index = 0;
+
     assert(regcomp(&command.data.substitute.preg, "\\(abc*\\)_\\(def*\\)", 0) == 0);
     command.data.substitute.replacement = "[\\1]foo[\\2]";
-
     _debug_exec_set_pattern_space("###abccc_defff###");
     exec_command(&command);
     cr_assert_str_eq(_debug_exec_pattern_space(), "###[abccc]foo[defff]###");
+
+    assert(regcomp(
+        &command.data.substitute.preg,
+        "_\\(a\\)_\\(b\\)_\\(c\\)_\\(d\\)_\\(e\\)_\\(f\\)_\\(g\\)_\\(h\\)_\\(i\\)_",
+        0
+    ) == 0);
+    command.data.substitute.replacement = "-\\1-\\2-\\3-\\4-\\5-\\6-\\7-\\8-\\9-";
+    _debug_exec_set_pattern_space("###_a_b_c_d_e_f_g_h_i_###");
+    exec_command(&command);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "###-a-b-c-d-e-f-g-h-i-###");
+
 }
 
 // Test(current_file, base)
