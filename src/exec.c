@@ -1,7 +1,6 @@
 #include "sed.h"
-#include <stdlib.h>
 #include <assert.h>
-
+#include <stdlib.h>
 
 #define CHAR_SPACE_MAX 20480
 // need under buffer for implementation of the 'x' command (can't swap array aka
@@ -133,10 +132,11 @@ exec_substitute(union command_data *data)
             size_t group = -1;
             if (*r == '&')
                 group = 0;
-            else if (r[0] == '\\' && isdigit(r[1]))
+            else if (*r == '\\')
             {
-                group = todigit(r[1]);
                 memmove(r, r + 1, strlen(r + 1) + 1);
+                if (isdigit(*r))
+                    group = todigit(*r);
             }
             if (group == -1)
                 continue;
@@ -148,10 +148,7 @@ exec_substitute(union command_data *data)
             }
             size_t group_len = pmatch[group].rm_eo - pmatch[group].rm_so;
             size_t old_offset = r - replacement;
-            replacement = xrealloc(
-                replacement,
-                strlen(replacement) + group_len + 1
-            );
+            replacement = xrealloc(replacement, strlen(replacement) + group_len + 1);
             r = replacement + old_offset;
             memmove(r + group_len, r, strlen(r) + 1);
             memcpy(r, space + pmatch[group].rm_so, group_len);
