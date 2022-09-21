@@ -73,6 +73,8 @@ xmalloc(size_t size);
 void *
 xrealloc(void *ptr, size_t size);
 char *
+xstrdup(const char *s);
+char *
 strjoinf(char *origin, ...);
 char *
 read_file(char *filepath);

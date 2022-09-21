@@ -124,16 +124,9 @@ exec_substitute(union command_data *data)
          regexec(&data->substitute.preg, space, SUBSTITUTE_NMATCH, pmatch, 0) == 0;
          occurence++)
     {
-        printf("ENTER %d %d\n", occurence, data->substitute.occurence_index);
-        for (int i = 0; pmatch[i].rm_so != -1; i++)
-        {
-            printf("match: %d -> %d\n", pmatch[i].rm_so, pmatch[i].rm_eo);
-        }
-        printf("\n");
-        char *replacement = strdup(data->substitute.replacement);
+        char *replacement = xstrdup(data->substitute.replacement);
         for (char *r = replacement; *r != '\0'; r++)
         {
-            printf("%c, ", *r);
             size_t group = -1;
             if (*r == '&')
                 group = 0;
@@ -149,21 +142,20 @@ exec_substitute(union command_data *data)
                 continue;
             size_t group_len = pmatch[group].rm_eo - pmatch[group].rm_so;
             size_t old_offset = r - replacement;
-            replacement = realloc(
-                replacement,
-                strlen(replacement) + group_len + 1);
+            replacement = xrealloc(replacement, strlen(replacement) + group_len + 1);
             r = replacement + old_offset;
-            memmove(r + group_len, r, strlen(r));
+            memmove(r + group_len, r, strlen(r) + 1);
             memcpy(r, space + pmatch[group].rm_so, group_len);
             r += group_len;
         }
-        printf("\n");
+        // data->substitute.replacement = replacement;
 
         char  *dest = space + pmatch[0].rm_so;
         char  *src = space + pmatch[0].rm_eo;
-        size_t replacement_len = strlen(data->substitute.replacement);
+        size_t replacement_len = strlen(replacement);
         memmove(dest + replacement_len, src, strlen(src) + 1);
-        memcpy(dest, data->substitute.replacement, replacement_len);
+        memcpy(dest, replacement, replacement_len);
+        free(replacement);
         if (!data->substitute.global &&
             occurence == data->substitute.occurence_index)
             break;
