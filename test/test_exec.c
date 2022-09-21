@@ -235,6 +235,17 @@ Test(exec_command, substitute_regex_group)
     exec_command(&command);
     cr_assert_str_eq(_debug_exec_pattern_space(), "###-a-b-c-d-e-f-g-h-i-###");
 
+    assert(regcomp(&command.data.substitute.preg, "I\\(abc*\\)I", 0) == 0);
+    command.data.substitute.replacement = "\\0_&_\\1";
+    _debug_exec_set_pattern_space("###IabcccI###");
+    exec_command(&command);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "###IabcccI_IabcccI_abccc###");
+
+    assert(regcomp(&command.data.substitute.preg, "I\\(abc*\\)I", 0) == 0);
+    command.data.substitute.replacement = "\\2\\3\\0\\4_&\\5\\9_\\6\\1\\7\\8";
+    _debug_exec_set_pattern_space("###IabcccI###");
+    exec_command(&command);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "###IabcccI_IabcccI_abccc###");
 }
 
 // Test(current_file, base)

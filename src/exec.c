@@ -142,7 +142,10 @@ exec_substitute(union command_data *data)
                 continue;
             memmove(r, r + 1, strlen(r + 1) + 1);
             if (pmatch[group].rm_so == -1 || pmatch[group].rm_eo == -1)
+            {
+                r--;
                 continue;
+            }
             size_t group_len = pmatch[group].rm_eo - pmatch[group].rm_so;
             size_t old_offset = r - replacement;
             replacement = xrealloc(
@@ -152,7 +155,7 @@ exec_substitute(union command_data *data)
             r = replacement + old_offset;
             memmove(r + group_len, r, strlen(r) + 1);
             memcpy(r, space + pmatch[group].rm_so, group_len);
-            r += group_len;
+            r += group_len - 1;
         }
         // data->substitute.replacement = replacement;
 
