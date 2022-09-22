@@ -1,5 +1,6 @@
 #include "sed.h"
 #include <assert.h>
+#include <errno.h>
 #include <criterion/criterion.h>
 #include <criterion/logging.h>
 #include <criterion/redirect.h>
@@ -339,6 +340,48 @@ Test(exec_command, substitute_print_no_replacement)
 
 Test(exec_command, substitute_write_file)
 {
+    char template[] = "/tmp/sed_testXXXXXX";
+    FILE *tmp_file = fdopen(mkstemp(template), "w");
+    assert(tmp_file != NULL);
+    fputs("bonjour\naurevoir\n", tmp_file);
+    fclose(tmp_file);
+
+    command.id = 's';
+    command.data.substitute.occurence_index = 0;
+    command.data.substitute.write_filepath = template;
+    assert(regcomp(&command.data.substitute.preg, "abc*", 0) == 0);
+    command.data.substitute.replacement = "foo";
+    _debug_exec_set_pattern_space("###abccc###");
+    exec_command(&command);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "###foo###");
+
+    tmp_file = fopen(template, "r");
+    assert(tmp_file != NULL);
+    cr_expect_file_contents_eq_str(tmp_file, "bonjour\naurevoir\n###foo###");
+    fclose(tmp_file);
+}
+
+Test(exec_command, substitute_write_file_no_replacement)
+{
+    char template[] = "/tmp/sed_testXXXXXX";
+    FILE *tmp_file = fdopen(mkstemp(template), "w");
+    assert(tmp_file != NULL);
+    fputs("bonjour\naurevoir\n", tmp_file);
+    fclose(tmp_file);
+
+    command.id = 's';
+    command.data.substitute.occurence_index = 0;
+    command.data.substitute.write_filepath = template;
+    assert(regcomp(&command.data.substitute.preg, "abc*", 0) == 0);
+    command.data.substitute.replacement = "foo";
+    _debug_exec_set_pattern_space("###accc###");
+    exec_command(&command);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "###accc###");
+
+    tmp_file = fopen(template, "r");
+    assert(tmp_file != NULL);
+    cr_expect_file_contents_eq_str(tmp_file, "bonjour\naurevoir\n");
+    fclose(tmp_file);
 }
 
 // Test(current_file, base)

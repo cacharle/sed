@@ -1,6 +1,7 @@
 #include "sed.h"
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define CHAR_SPACE_MAX 20480
 // need under buffer for implementation of the 'x' command (can't swap array aka
@@ -174,6 +175,14 @@ exec_substitute(union command_data *data)
     }
     if (data->substitute.print && found)
         fputs(pattern_space, stdout);
+    if (data->substitute.write_filepath != NULL && found)
+    {
+        FILE *file = fopen(data->substitute.write_filepath, "a");
+        if (file == NULL)
+            die("couldn't open file %s: %s", data->substitute.write_filepath, strerror(errno));
+        fputs(pattern_space, file);
+        fclose(file);
+    }
 }
 
 typedef void (*exec_func)(union command_data *data);

@@ -1,4 +1,5 @@
 #include "sed.h"
+#include <assert.h>
 #include <criterion/criterion.h>
 
 Test(strjoinf, base)
@@ -22,6 +23,7 @@ Test(read_file, base)
 {
     char template[] = "/tmp/sed_testXXXXXX";  // modified by mkstemp
     FILE *tmp_file = fdopen(mkstemp(template), "w+");
+    assert(tmp_file != NULL);
     char *expected = "bonjour je suis charles";
     fputs(expected, tmp_file);
     fclose(tmp_file);
