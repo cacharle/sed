@@ -1,6 +1,7 @@
 #include "sed.h"
 #include <assert.h>
 #include <criterion/criterion.h>
+#include <criterion/logging.h>
 #include <criterion/redirect.h>
 
 char *
@@ -305,6 +306,35 @@ Test(exec_command, substitute_global)
 
 Test(exec_command, substitute_print)
 {
+    command.id = 's';
+    command.data.substitute.occurence_index = 0;
+    command.data.substitute.print = true;
+    assert(regcomp(&command.data.substitute.preg, "abc*", 0) == 0);
+    command.data.substitute.replacement = "foo";
+    _debug_exec_set_pattern_space("###abccc###");
+    fflush(stdout);
+    cr_redirect_stdout();
+    exec_command(&command);
+    char *expected =  "###foo###";
+    cr_assert_str_eq(_debug_exec_pattern_space(), expected);
+    fflush(stdout);
+    cr_expect_stdout_eq_str(expected);
+}
+
+Test(exec_command, substitute_print_no_replacement)
+{
+    command.id = 's';
+    command.data.substitute.occurence_index = 0;
+    command.data.substitute.print = true;
+    assert(regcomp(&command.data.substitute.preg, "abc*", 0) == 0);
+    command.data.substitute.replacement = "foo";
+    _debug_exec_set_pattern_space("###accc###");
+    fflush(stdout);
+    cr_redirect_stdout();
+    exec_command(&command);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "###accc###");
+    fflush(stdout);
+    cr_expect_stdout_eq_str("");
 }
 
 Test(exec_command, substitute_write_file)

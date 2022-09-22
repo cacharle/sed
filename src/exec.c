@@ -121,11 +121,13 @@ exec_substitute(union command_data *data)
         data->substitute.occurence_index = 1;
     char      *space = pattern_space;
     regmatch_t pmatch[SUBSTITUTE_NMATCH + 1];
+    bool found = false;
     for (size_t occurence = 1;
          *space != '\0' &&
          regexec(&data->substitute.preg, space, SUBSTITUTE_NMATCH, pmatch, 0) == 0;
          occurence++)
     {
+        found = true;
         if (occurence < data->substitute.occurence_index)
         {
             space += pmatch[0].rm_eo;
@@ -170,6 +172,8 @@ exec_substitute(union command_data *data)
             break;
         space += replacement_len;
     }
+    if (data->substitute.print && found)
+        fputs(pattern_space, stdout);
 }
 
 typedef void (*exec_func)(union command_data *data);
