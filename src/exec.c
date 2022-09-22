@@ -126,6 +126,11 @@ exec_substitute(union command_data *data)
          regexec(&data->substitute.preg, space, SUBSTITUTE_NMATCH, pmatch, 0) == 0;
          occurence++)
     {
+        if (occurence < data->substitute.occurence_index)
+        {
+            space += pmatch[0].rm_eo;
+            continue;
+        }
         char *replacement = xstrdup(data->substitute.replacement);
         for (char *r = replacement; *r != '\0'; r++)
         {

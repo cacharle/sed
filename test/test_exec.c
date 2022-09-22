@@ -258,6 +258,47 @@ Test(exec_command, substitute_escape)
     cr_assert_str_eq(_debug_exec_pattern_space(), "###\\[abccc]fo&o[defff]###");
 }
 
+Test(exec_command, substitute_occurence)
+{
+    command.id = 's';
+    command.data.substitute.occurence_index = 1;
+    assert(regcomp(&command.data.substitute.preg, "abc*", 0) == 0);
+    command.data.substitute.replacement = "foo";
+    _debug_exec_set_pattern_space("###abccc###abccc###abccc###");
+    exec_command(&command);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "###foo###abccc###abccc###");
+
+    command.data.substitute.occurence_index = 2;
+    command.data.substitute.replacement = "foo";
+    _debug_exec_set_pattern_space("###abccc###abccc###abccc###");
+    exec_command(&command);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "###abccc###foo###abccc###");
+
+    command.data.substitute.occurence_index = 3;
+    command.data.substitute.replacement = "foo";
+    _debug_exec_set_pattern_space("###abccc###abccc###abccc###");
+    exec_command(&command);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "###abccc###abccc###foo###");
+
+    command.data.substitute.occurence_index = 2;
+    command.data.substitute.replacement = "foo";
+    _debug_exec_set_pattern_space("###abcccabcccabccc###");
+    exec_command(&command);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "###abcccfooabccc###");
+}
+
+Test(exec_command, substitute_global)
+{
+}
+
+Test(exec_command, substitute_print)
+{
+}
+
+Test(exec_command, substitute_write_file)
+{
+}
+
 // Test(current_file, base)
 // {
 // 	cr_redirect_stdin();
