@@ -289,6 +289,18 @@ Test(exec_command, substitute_occurence)
 
 Test(exec_command, substitute_global)
 {
+    command.id = 's';
+    command.data.substitute.occurence_index = 0;
+    command.data.substitute.global = true;
+    assert(regcomp(&command.data.substitute.preg, "abc*", 0) == 0);
+    command.data.substitute.replacement = "foo";
+    _debug_exec_set_pattern_space("###abccc###abccc###abccc###");
+    exec_command(&command);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "###foo###foo###foo###");
+
+    _debug_exec_set_pattern_space("###abcccabcccabccc###");
+    exec_command(&command);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "###foofoofoo###");
 }
 
 Test(exec_command, substitute_print)

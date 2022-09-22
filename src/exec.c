@@ -159,8 +159,6 @@ exec_substitute(union command_data *data)
             memcpy(r, space + pmatch[group].rm_so, group_len);
             r += group_len - 1;
         }
-        // data->substitute.replacement = replacement;
-
         char  *dest = space + pmatch[0].rm_so;
         char  *src = space + pmatch[0].rm_eo;
         size_t replacement_len = strlen(replacement);
@@ -170,8 +168,6 @@ exec_substitute(union command_data *data)
         if (!data->substitute.global &&
             occurence == data->substitute.occurence_index)
             break;
-        //     if (!data->substitute.global)
-        //         break;
         space += replacement_len;
     }
 }
