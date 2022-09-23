@@ -185,6 +185,49 @@ exec_substitute(union command_data *data)
     }
 }
 
+static const char *reverse_available_escape = "\\\a\b\t\r\v\f";
+static const char  reverse_escape_lookup[] = {
+     ['\\'] = '\\',
+     ['\a'] = 'a',
+     ['\b'] = 'b',
+     ['\t'] = 't',
+     ['\r'] = 'r',
+     ['\v'] = 'v',
+     ['\f'] = 'f',
+};
+
+static const size_t print_escape_line_wrap = 60;
+
+void
+exec_print_escape(union command_data *data)
+{
+    size_t len = 1;
+    for (char *space = pattern_space; *space != '\0'; space++, len++)
+    {
+        if (strchr(reverse_available_escape, *space) != NULL)
+        {
+            fputc('\\', stdout);
+            fputc(reverse_escape_lookup[(size_t)*space], stdout);
+            continue;
+        }
+        else if (*space == '\n')
+        {
+            fputc('$', stdout);
+            fputc('\n', stdout);
+        }
+        else if (isprint(*space))
+            fputc(*space, stdout);
+        else
+            printf("\\%03o", *space);
+        if (len == print_escape_line_wrap)
+        {
+            fputc('\\', stdout);
+            fputc('\n', stdout);
+        }
+    }
+}
+
+
 typedef void (*exec_func)(union command_data *data);
 
 static const exec_func exec_func_lookup[] = {
@@ -204,7 +247,7 @@ static const exec_func exec_func_lookup[] = {
     ['G'] = exec_append_pattern_by_hold,
     ['h'] = exec_replace_hold_by_pattern,
     ['H'] = exec_append_hold_by_pattern,
-    ['l'] = NULL,
+    ['l'] = exec_print_escape,
     ['n'] = NULL,
     ['N'] = NULL,
     ['p'] = exec_print,

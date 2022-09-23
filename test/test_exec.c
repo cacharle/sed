@@ -384,6 +384,72 @@ Test(exec_command, substitute_write_file_no_replacement)
     fclose(tmp_file);
 }
 
+Test(exec_command, print_escape_nothing_special)
+{
+    cr_redirect_stdout();
+    command.id = 'l';
+    _debug_exec_set_pattern_space("bonjour");
+    exec_command(&command);
+    fflush(stdout);
+    cr_expect_stdout_eq_str("bonjour");
+}
+
+Test(exec_command, print_escape_with_newline)
+{
+    cr_redirect_stdout();
+    command.id = 'l';
+    _debug_exec_set_pattern_space("bonjour\n");
+    exec_command(&command);
+    fflush(stdout);
+    cr_expect_stdout_eq_str("bonjour$\n");
+}
+
+Test(exec_command, print_escape_with_escape)
+{
+    cr_redirect_stdout();
+    command.id = 'l';
+    _debug_exec_set_pattern_space("\\_\b_\t_\r_\v_\f_\n");
+    exec_command(&command);
+    fflush(stdout);
+    cr_expect_stdout_eq_str("\\\\_\\b_\\t_\\r_\\v_\\f_$\n");
+}
+
+Test(exec_command, print_escape_with_non_printable)
+{
+    cr_redirect_stdout();
+    command.id = 'l';
+    _debug_exec_set_pattern_space("\033\037\001\004\177");
+    exec_command(&command);
+    fflush(stdout);
+    cr_expect_stdout_eq_str("\\033\\037\\001\\004\\177");
+}
+
+Test(exec_command, print_escape_fold)
+{
+    cr_redirect_stdout();
+    command.id = 'l';
+    _debug_exec_set_pattern_space(
+        "0123456789"
+        "0123456789"
+        "0123456789"
+        "0123456789"
+        "0123456789"
+        "0123456789"
+        "foo"
+    );
+    exec_command(&command);
+    fflush(stdout);
+    cr_expect_stdout_eq_str(
+        "0123456789"
+        "0123456789"
+        "0123456789"
+        "0123456789"
+        "0123456789"
+        "0123456789\\\n"
+        "foo"
+    );
+}
+
 // Test(current_file, base)
 // {
 // 	cr_redirect_stdin();
