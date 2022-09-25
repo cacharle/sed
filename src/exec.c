@@ -122,7 +122,7 @@ exec_substitute(union command_data *data)
         data->substitute.occurence_index = 1;
     char      *space = pattern_space;
     regmatch_t pmatch[SUBSTITUTE_NMATCH + 1];
-    bool found = false;
+    bool       found = false;
     for (size_t occurence = 1;
          *space != '\0' &&
          regexec(&data->substitute.preg, space, SUBSTITUTE_NMATCH, pmatch, 0) == 0;
@@ -177,9 +177,12 @@ exec_substitute(union command_data *data)
         fputs(pattern_space, stdout);
     if (data->substitute.write_filepath != NULL && found)
     {
+        // This is pretty inefficient since we reopen the file on every substitute
         FILE *file = fopen(data->substitute.write_filepath, "a");
         if (file == NULL)
-            die("couldn't open file %s: %s", data->substitute.write_filepath, strerror(errno));
+            die("couldn't open file %s: %s",
+                data->substitute.write_filepath,
+                strerror(errno));
         fputs(pattern_space, file);
         fclose(file);
     }

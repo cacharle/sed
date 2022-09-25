@@ -9,7 +9,7 @@ deps = [criterion_dep]
 c_args = []
 if host_machine.system() == 'linux'
   gcov_dep = cc.find_library('gcov', required : true)
-  deps.append(gcov_dep)
+  deps += [gcov_dep]
   c_args = ['--coverage']
 endif
 test_exec = executable(

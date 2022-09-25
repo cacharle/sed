@@ -319,7 +319,8 @@ parse_substitute(char *s, struct command *command)
             skip_blank(&s);
             s = parse_text(s, &write_file_command);
             command->data.substitute.write_filepath = write_file_command.data.text;
-            break;  // no switch because I want to break from the loop and not the switch
+            break;  // no switch because I want to break from the loop and not the
+                    // switch
         }
         else
         {

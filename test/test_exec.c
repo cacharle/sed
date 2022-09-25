@@ -1,9 +1,9 @@
 #include "sed.h"
 #include <assert.h>
-#include <errno.h>
 #include <criterion/criterion.h>
 #include <criterion/logging.h>
 #include <criterion/redirect.h>
+#include <errno.h>
 
 char *
 _debug_exec_set_pattern_space(const char *content);
@@ -316,7 +316,7 @@ Test(exec_command, substitute_print)
     fflush(stdout);
     cr_redirect_stdout();
     exec_command(&command);
-    char *expected =  "###foo###";
+    char *expected = "###foo###";
     cr_assert_str_eq(_debug_exec_pattern_space(), expected);
     fflush(stdout);
     cr_expect_stdout_eq_str(expected);
