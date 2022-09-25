@@ -98,5 +98,7 @@ parse(char *s);
 // exec.c
 void
 exec_command(struct command *command);
+void
+exec(script_t commands, char *local_filepaths[], size_t local_filepaths_len);
 
 #endif

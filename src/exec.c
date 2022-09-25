@@ -11,6 +11,10 @@ static char   hold_space_under[CHAR_SPACE_MAX + 1] = {'\0'};
 static char  *pattern_space = pattern_space_under;
 static char  *hold_space = hold_space_under;
 static size_t line_index = 0;
+static bool   auto_print = false;
+
+static char *
+next_cycle(void);
 
 void
 exec_insert(union command_data *data)
@@ -230,6 +234,60 @@ exec_print_escape(union command_data *data)
     }
 }
 
+void
+exec_next(union command_data *data)
+{
+    (void)data;
+    if (auto_print)
+        fputs(pattern_space, stdout);
+    char *line = next_cycle();
+    if (line == NULL)
+        exit(EXIT_SUCCESS);
+    strcpy(pattern_space, line);
+}
+
+void
+exec_next_append(union command_data *data)
+{
+    (void)data;
+    char *line = next_cycle();
+    if (line == NULL)
+        exit(EXIT_SUCCESS);
+    strcat(pattern_space, "\n");
+    strcat(pattern_space, line);
+}
+
+void
+exec_quit(union command_data *data)
+{
+    (void)data;
+    exit(EXIT_SUCCESS);
+}
+
+void
+exec_print_line_number(union command_data *data)
+{
+    (void)data;
+    printf("%zu\n", line_index);
+}
+
+void
+exec_comment(union command_data *data)
+{
+    (void)data;
+}
+
+void
+exec_write(union command_data *data)
+{
+    FILE *file = fopen(data->text, "a");
+    if (file == NULL)
+        die("couldn't open file %s: %s",
+            data->text,
+            strerror(errno));
+    fputs(pattern_space, file);
+    fclose(file);
+}
 
 typedef void (*exec_func)(union command_data *data);
 
@@ -243,7 +301,7 @@ static const exec_func exec_func_lookup[] = {
     ['b'] = NULL,
     ['t'] = NULL,
     ['r'] = exec_read_file,
-    ['w'] = NULL,
+    ['w'] = exec_write,
     ['d'] = exec_delete,
     ['D'] = exec_delete_newline,
     ['g'] = exec_replace_pattern_by_hold,
@@ -251,14 +309,14 @@ static const exec_func exec_func_lookup[] = {
     ['h'] = exec_replace_hold_by_pattern,
     ['H'] = exec_append_hold_by_pattern,
     ['l'] = exec_print_escape,
-    ['n'] = NULL,
-    ['N'] = NULL,
+    ['n'] = exec_next,
+    ['N'] = exec_next_append,
     ['p'] = exec_print,
     ['P'] = exec_print_until_newline,
-    ['q'] = NULL,
+    ['q'] = exec_quit,
     ['x'] = exec_exchange,
-    ['='] = NULL,
-    ['#'] = NULL,
+    ['='] = exec_print_line_number,
+    ['#'] = exec_comment,
     ['s'] = exec_substitute,
     ['y'] = exec_translate,
 };
@@ -284,19 +342,15 @@ static char **filepaths = NULL;
 static size_t filepaths_len = 0;
 
 void
-exec_init(char **local_filepaths, size_t local_filepaths_len)
+exec(script_t commands, char *local_filepaths[], size_t local_filepaths_len)
 {
     filepaths = local_filepaths;
     filepaths_len = local_filepaths_len;
     if (local_filepaths_len == 0)
+    {
         filepaths = filepaths_stdin_only;
-}
-
-void
-exec(char *local_filepaths[], size_t local_filepaths_len, script_t commands)
-{
-    exec_init(local_filepaths, local_filepaths_len);
-    // run
+        filepaths_len = 1;
+    }
 }
 
 FILE *
@@ -315,22 +369,19 @@ current_file(void)
         filepaths_index++;
     char *filepath = filepaths[filepaths_index];
     if (strcmp(filepath, "-") == 0)
-        file = stdin;
-    else
+        return stdin;
+    file = fopen(filepath, "r");
+    if (file == NULL)
     {
-        file = fopen(filepath, "r");
-        if (file == NULL)
-        {
-            put_error("can't read %s: %s", filepath, strerror(errno));
-            return current_file();
-        }
+        put_error("can't read %s: %s", filepath, strerror(errno));
+        return current_file();
     }
     return file;
 }
 
 static const size_t line_size_init = 4098;
 
-char *
+static char *
 next_cycle(void)
 {
     static size_t line_size = line_size_init;
@@ -347,7 +398,7 @@ next_cycle(void)
     if (getline(&line, &line_size, file) == -1 && errno != 0)
         die("error getline: %s", strerror(errno));
     line_index++;
-    strcpy(pattern_space, line);
+    // strcpy(pattern_space, line);
     return line;
 }
 
