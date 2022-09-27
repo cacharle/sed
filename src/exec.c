@@ -412,8 +412,48 @@ next_cycle(void)
     if (getline(&line, &line_size, file) == -1 && errno != 0)
         die("error getline: %s", strerror(errno));
     line_index++;
-    // strcpy(pattern_space, line);
     return line;
+}
+
+#define FILE_LOOKUP_CAPACITY 10
+
+struct file_lookup_entry
+{
+    char *filepath;
+    FILE *file;
+};
+
+static struct file_lookup_entry file_lookup[FILE_LOOKUP_CAPACITY + 1] = {0};
+static size_t file_lookup_len = 0;
+
+FILE *
+get_file(char *filepath)
+{
+    for (size_t i = 0; i < filepaths_len; i++)
+    {
+        if (strcmp(file_lookup[i].filepath, filepath) == 0)
+            return file_lookup[i].file;
+    }
+    FILE *file = fopen(filepath, "a");
+    if (file == NULL)
+        die("couldn't open file %s: %s",
+            data->substitute.write_filepath,
+            strerror(errno));
+    file_lookup[file_lookup_len].filepath = xstrdup(filepath);
+    file_lookup[file_lookup_len].file = file;
+    file_lookup_len++;
+    return file;
+
+}
+
+void
+free_files(void)
+{
+    for (size_t i = 0; i < filepaths_len; i++)
+    {
+        free(file_lookup[i].filepath);
+        fclose(file_lookup[i].file);
+    }
 }
 
 /******************************************************************/
