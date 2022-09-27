@@ -13,6 +13,10 @@ char *
 _debug_exec_hold_space(void);
 char *
 _debug_exec_pattern_space(void);
+void
+exec_init(char *local_filepaths[], size_t local_filepaths_len);
+FILE *
+current_file(void);
 
 static struct command command;
 
@@ -450,17 +454,66 @@ Test(exec_command, print_escape_fold)
     );
 }
 
-// Test(current_file, base)
-// {
-// 	cr_redirect_stdin();
-// 	fputs("bonjour", stdin);
-// 	char *filepaths[] = {};
-// 	size_t filepaths_len = 0;
-// 	FILE *file = NULL;
-// 	file = current_file();
-// 	cr_asser_eq(file, stdin);
-// 	while (fgetc(stdin) != EOF)
-// 		;
-// 	file = current_file();
-// 	cr_asser_eq(file, NULL);
-// }
+Test(current_file, no_filepaths)
+{
+	char *filepaths[] = {};
+	size_t filepaths_len = 0;
+    exec_init(filepaths, filepaths_len);
+	FILE *file = current_file();
+	cr_expect_eq(file, stdin);
+}
+
+Test(current_file, one_file)
+{
+    char template[] = "/tmp/sed_testXXXXXX";
+    FILE *t = fdopen(mkstemp(template), "w");
+    assert(t != NULL);
+    fputs("bonjour", t);
+    fclose(t);
+	char *filepaths[] = {template};
+	size_t filepaths_len = 1;
+    exec_init(filepaths, filepaths_len);
+	FILE *file = current_file();
+    cr_expect(!feof(file));
+	cr_expect_eq(file, current_file());
+    while (fgetc(file) != EOF)
+        ;
+    cr_expect(feof(file));
+	cr_expect_null(current_file());
+}
+
+Test(current_file, two_file)
+{
+    char template1[] = "/tmp/sed_testXXXXXX";
+    FILE *t1 = fdopen(mkstemp(template1), "w");
+    assert(t1 != NULL);
+    fputs("bonjour", t1);
+    fclose(t1);
+
+    char template2[] = "/tmp/sed_testXXXXXX";
+    FILE *t2 = fdopen(mkstemp(template2), "w");
+    assert(t2 != NULL);
+    fputs("bonjour", t2);
+    fclose(t2);
+
+	char *filepaths[] = {template1, template2};
+	size_t filepaths_len = 2;
+    exec_init(filepaths, filepaths_len);
+
+	FILE *file = current_file();
+    cr_expect(!feof(file));
+	cr_expect_eq(file, current_file());
+    while (fgetc(file) != EOF)
+        ;
+    cr_expect(feof(file));
+
+	file = current_file();
+	cr_expect_not_null(file);
+    cr_expect(!feof(file));
+	cr_expect_eq(file, current_file());
+    while (fgetc(file) != EOF)
+        ;
+    cr_expect(feof(file));
+
+	cr_expect_null(current_file());
+}

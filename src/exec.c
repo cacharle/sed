@@ -342,7 +342,7 @@ static char **filepaths = NULL;
 static size_t filepaths_len = 0;
 
 void
-exec(script_t commands, char *local_filepaths[], size_t local_filepaths_len)
+exec_init(char *local_filepaths[], size_t local_filepaths_len)
 {
     filepaths = local_filepaths;
     filepaths_len = local_filepaths_len;
@@ -353,20 +353,33 @@ exec(script_t commands, char *local_filepaths[], size_t local_filepaths_len)
     }
 }
 
+void
+exec(script_t commands, char *local_filepaths[], size_t local_filepaths_len)
+{
+    exec_init(local_filepaths, local_filepaths_len);
+    // for command in commands
+    //     exec_command
+}
+
 FILE *
 current_file(void)
 {
     static size_t filepaths_index = 0;
     static FILE  *file = NULL;
 
-    if (file != NULL && !feof(file))
-        return file;
-    if (filepaths_index == filepaths_len - 1 && feof(file))
+    if (file == NULL && filepaths_index == filepaths_len)
         return NULL;
-    if (file != NULL && file != stdin)
-        fclose(file);
     if (file != NULL)
+    {
+        if (!feof(file))
+            return file;
+        if (file != stdin)
+            fclose(file);
+        file = NULL;
+        if (filepaths_index == filepaths_len - 1)
+            return NULL;
         filepaths_index++;
+    }
     char *filepath = filepaths[filepaths_index];
     if (strcmp(filepath, "-") == 0)
         return stdin;
@@ -374,6 +387,7 @@ current_file(void)
     if (file == NULL)
     {
         put_error("can't read %s: %s", filepath, strerror(errno));
+        filepaths_index++;
         return current_file();
     }
     return file;
