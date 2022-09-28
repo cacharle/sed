@@ -17,6 +17,8 @@ void
 exec_init(char *local_filepaths[], size_t local_filepaths_len);
 FILE *
 current_file(void);
+char *
+next_cycle(void);
 
 static struct command command;
 
@@ -516,4 +518,25 @@ Test(current_file, two_file)
     cr_expect(feof(file));
 
 	cr_expect_null(current_file());
+}
+
+Test(next_cycle, one_file_three_lines)
+{
+    char template[] = "/tmp/sed_testXXXXXX";
+    FILE *t = fdopen(mkstemp(template), "w");
+    assert(t != NULL);
+    fputs("a\nb\nc\n", t);
+    fclose(t);
+	char *filepaths[] = {template};
+	size_t filepaths_len = 1;
+    exec_init(filepaths, filepaths_len);
+    char *line;
+    line = next_cycle();
+    cr_expect_str_eq(line, "a\n");
+    line = next_cycle();
+    cr_expect_str_eq(line, "b\n");
+    line = next_cycle();
+    cr_expect_str_eq(line, "c\n");
+    line = next_cycle();
+    cr_expect_null(line);
 }

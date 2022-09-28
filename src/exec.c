@@ -13,7 +13,7 @@ static char  *hold_space = hold_space_under;
 static size_t line_index = 0;
 static bool   auto_print = false;
 
-static char *
+char *
 next_cycle(void);
 
 void
@@ -342,7 +342,7 @@ static char **filepaths = NULL;
 static size_t filepaths_len = 0;
 
 void
-exec_init(char *local_filepaths[], size_t local_filepaths_len)
+exec_init(char **local_filepaths, size_t local_filepaths_len)
 {
     filepaths = local_filepaths;
     filepaths_len = local_filepaths_len;
@@ -354,7 +354,7 @@ exec_init(char *local_filepaths[], size_t local_filepaths_len)
 }
 
 void
-exec(script_t commands, char *local_filepaths[], size_t local_filepaths_len)
+exec(script_t commands, char **local_filepaths, size_t local_filepaths_len)
 {
     exec_init(local_filepaths, local_filepaths_len);
     // for command in commands
@@ -395,7 +395,7 @@ current_file(void)
 
 static const size_t line_size_init = 4098;
 
-static char *
+char *
 next_cycle(void)
 {
     static size_t line_size = line_size_init;
@@ -409,8 +409,11 @@ next_cycle(void)
         return NULL;
     }
     errno = 0;
-    if (getline(&line, &line_size, file) == -1 && errno != 0)
+    ssize_t ret = getline(&line, &line_size, file);
+    if (ret == -1 && errno != 0)
         die("error getline: %s", strerror(errno));
+    if (ret == -1) // eof (why no eof before getline call tho?)
+        return next_cycle();
     line_index++;
     return line;
 }
@@ -437,7 +440,7 @@ get_file(char *filepath)
     FILE *file = fopen(filepath, "a");
     if (file == NULL)
         die("couldn't open file %s: %s",
-            data->substitute.write_filepath,
+            filepath,
             strerror(errno));
     file_lookup[file_lookup_len].filepath = xstrdup(filepath);
     file_lookup[file_lookup_len].file = file;
