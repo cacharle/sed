@@ -617,3 +617,41 @@ Test(exec_command, next_auto_print)
     fflush(stdout);
     cr_expect_stdout_eq_str("bonjour\na\nb\nc\n");
 }
+
+Test(exec_command, comment)
+{
+    command.id = '#';
+    exec_command(&command);
+}
+
+Test(exec_command, quit)
+{
+    command.id = 'q';
+    exec_command(&command);
+    cr_expect(false);  // should never get executed
+}
+
+Test(exec_command, print_line_number)
+{
+    char template[] = "/tmp/sed_testXXXXXX";
+    FILE *t = fdopen(mkstemp(template), "w");
+    assert(t != NULL);
+    fputs("a\nb\nc\nd\n", t);
+    fclose(t);
+	char *filepaths[] = {template};
+	size_t filepaths_len = 1;
+    exec_init(filepaths, filepaths_len, false);
+
+    cr_redirect_stdout();
+    command.id = '=';
+    next_cycle();
+    exec_command(&command);
+    next_cycle();
+    exec_command(&command);
+    next_cycle();
+    exec_command(&command);
+    next_cycle();
+    exec_command(&command);
+    fflush(stdout);
+    cr_expect_stdout_eq_str("1\n2\n3\n4\n");
+}
