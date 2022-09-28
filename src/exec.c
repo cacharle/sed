@@ -342,8 +342,9 @@ static char **filepaths = NULL;
 static size_t filepaths_len = 0;
 
 void
-exec_init(char **local_filepaths, size_t local_filepaths_len)
+exec_init(char **local_filepaths, size_t local_filepaths_len, bool auto_print_)
 {
+    auto_print = auto_print_;
     filepaths = local_filepaths;
     filepaths_len = local_filepaths_len;
     if (local_filepaths_len == 0)
@@ -356,7 +357,7 @@ exec_init(char **local_filepaths, size_t local_filepaths_len)
 void
 exec(script_t commands, char **local_filepaths, size_t local_filepaths_len)
 {
-    exec_init(local_filepaths, local_filepaths_len);
+    exec_init(local_filepaths, local_filepaths_len, false);
     // for command in commands
     //     exec_command
 }

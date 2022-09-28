@@ -14,7 +14,7 @@ _debug_exec_hold_space(void);
 char *
 _debug_exec_pattern_space(void);
 void
-exec_init(char *local_filepaths[], size_t local_filepaths_len);
+exec_init(char **local_filepaths, size_t local_filepaths_len, bool auto_print_);
 FILE *
 current_file(void);
 char *
@@ -460,7 +460,7 @@ Test(current_file, no_filepaths)
 {
 	char *filepaths[] = {};
 	size_t filepaths_len = 0;
-    exec_init(filepaths, filepaths_len);
+    exec_init(filepaths, filepaths_len, false);
 	FILE *file = current_file();
 	cr_expect_eq(file, stdin);
 }
@@ -474,7 +474,7 @@ Test(current_file, one_file)
     fclose(t);
 	char *filepaths[] = {template};
 	size_t filepaths_len = 1;
-    exec_init(filepaths, filepaths_len);
+    exec_init(filepaths, filepaths_len, false);
 	FILE *file = current_file();
     cr_expect(!feof(file));
 	cr_expect_eq(file, current_file());
@@ -500,7 +500,7 @@ Test(current_file, two_file)
 
 	char *filepaths[] = {template1, template2};
 	size_t filepaths_len = 2;
-    exec_init(filepaths, filepaths_len);
+    exec_init(filepaths, filepaths_len, false);
 
 	FILE *file = current_file();
     cr_expect(!feof(file));
@@ -529,7 +529,7 @@ Test(next_cycle, one_file_three_lines)
     fclose(t);
 	char *filepaths[] = {template};
 	size_t filepaths_len = 1;
-    exec_init(filepaths, filepaths_len);
+    exec_init(filepaths, filepaths_len, false);
     char *line;
     line = next_cycle();
     cr_expect_str_eq(line, "a\n");
@@ -539,4 +539,81 @@ Test(next_cycle, one_file_three_lines)
     cr_expect_str_eq(line, "c\n");
     line = next_cycle();
     cr_expect_null(line);
+}
+
+Test(next_cycle, two_file_four_lines)
+{
+    char template1[] = "/tmp/sed_testXXXXXX";
+    FILE *t1 = fdopen(mkstemp(template1), "w");
+    assert(t1 != NULL);
+    fputs("a\nb\n", t1);
+    fclose(t1);
+    char template2[] = "/tmp/sed_testXXXXXX";
+    FILE *t2 = fdopen(mkstemp(template2), "w");
+    assert(t2 != NULL);
+    fputs("c\nd\n", t2);
+    fclose(t2);
+
+	char *filepaths[] = {template1, template2};
+	size_t filepaths_len = 2;
+    exec_init(filepaths, filepaths_len, false);
+    char *line;
+    line = next_cycle();
+    cr_expect_str_eq(line, "a\n");
+    line = next_cycle();
+    cr_expect_str_eq(line, "b\n");
+    line = next_cycle();
+    cr_expect_str_eq(line, "c\n");
+    line = next_cycle();
+    cr_expect_str_eq(line, "d\n");
+    line = next_cycle();
+    cr_expect_null(line);
+}
+
+Test(exec_command, next_no_auto_print)
+{
+    char template[] = "/tmp/sed_testXXXXXX";
+    FILE *t = fdopen(mkstemp(template), "w");
+    assert(t != NULL);
+    fputs("a\nb\nc\nd\n", t);
+    fclose(t);
+	char *filepaths[] = {template};
+	size_t filepaths_len = 1;
+    exec_init(filepaths, filepaths_len, false);
+
+    command.id = 'n';
+    exec_command(&command);
+    cr_expect_str_eq(_debug_exec_pattern_space(), "a\n");
+    exec_command(&command);
+    cr_expect_str_eq(_debug_exec_pattern_space(), "b\n");
+    exec_command(&command);
+    cr_expect_str_eq(_debug_exec_pattern_space(), "c\n");
+    exec_command(&command);
+    cr_expect_str_eq(_debug_exec_pattern_space(), "d\n");
+}
+
+Test(exec_command, next_auto_print)
+{
+    char template[] = "/tmp/sed_testXXXXXX";
+    FILE *t = fdopen(mkstemp(template), "w");
+    assert(t != NULL);
+    fputs("a\nb\nc\nd\n", t);
+    fclose(t);
+	char *filepaths[] = {template};
+	size_t filepaths_len = 1;
+    exec_init(filepaths, filepaths_len, true);
+
+    cr_redirect_stdout();
+    _debug_exec_set_pattern_space("bonjour\n");
+    command.id = 'n';
+    exec_command(&command);
+    cr_expect_str_eq(_debug_exec_pattern_space(), "a\n");
+    exec_command(&command);
+    cr_expect_str_eq(_debug_exec_pattern_space(), "b\n");
+    exec_command(&command);
+    cr_expect_str_eq(_debug_exec_pattern_space(), "c\n");
+    exec_command(&command);
+    cr_expect_str_eq(_debug_exec_pattern_space(), "d\n");
+    fflush(stdout);
+    cr_expect_stdout_eq_str("bonjour\na\nb\nc\n");
 }
