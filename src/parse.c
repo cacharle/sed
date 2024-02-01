@@ -65,11 +65,11 @@ strchr_newline_or_end(const char *s)
 
 static const char *available_escape = "tnrvf";
 static const char  escape_lookup[] = {
-     ['t'] = '\t',
-     ['n'] = '\n',
-     ['r'] = '\r',
-     ['v'] = '\v',
-     ['f'] = '\f',
+    ['t'] = '\t',
+    ['n'] = '\n',
+    ['r'] = '\r',
+    ['v'] = '\v',
+    ['f'] = '\f',
 };
 
 // Handle escaped special characters (tabs, newline, etc...)
@@ -146,6 +146,7 @@ char *
 parse_addresses(char *s, struct addresses *addresses)
 {
     char *end;
+    addresses->in_range = false;
     addresses->count = 0;
     end = parse_address(s, &addresses->addresses[0]);
     if (s == end)

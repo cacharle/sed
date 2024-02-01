@@ -9,6 +9,8 @@ char *
 _debug_exec_set_pattern_space(const char *content);
 char *
 _debug_exec_set_hold_space(const char *content);
+void
+_debug_exec_set_line_index(const size_t line_index);
 char *
 _debug_exec_hold_space(void);
 char *
@@ -18,7 +20,9 @@ exec_init(char **local_filepaths, size_t local_filepaths_len, bool auto_print_);
 FILE *
 current_file(void);
 char *
-next_cycle(void);
+next_line(void);
+void
+exec_commands(script_t commands);
 
 static struct command command;
 
@@ -434,35 +438,31 @@ Test(exec_command, print_escape_fold)
 {
     cr_redirect_stdout();
     command.id = 'l';
-    _debug_exec_set_pattern_space(
-        "0123456789"
-        "0123456789"
-        "0123456789"
-        "0123456789"
-        "0123456789"
-        "0123456789"
-        "foo"
-    );
+    _debug_exec_set_pattern_space("0123456789"
+                                  "0123456789"
+                                  "0123456789"
+                                  "0123456789"
+                                  "0123456789"
+                                  "0123456789"
+                                  "foo");
     exec_command(&command);
     fflush(stdout);
-    cr_expect_stdout_eq_str(
-        "0123456789"
-        "0123456789"
-        "0123456789"
-        "0123456789"
-        "0123456789"
-        "0123456789\\\n"
-        "foo"
-    );
+    cr_expect_stdout_eq_str("0123456789"
+                            "0123456789"
+                            "0123456789"
+                            "0123456789"
+                            "0123456789"
+                            "0123456789\\\n"
+                            "foo");
 }
 
 Test(current_file, no_filepaths)
 {
-	char *filepaths[] = {};
-	size_t filepaths_len = 0;
+    char  *filepaths[] = {};
+    size_t filepaths_len = 0;
     exec_init(filepaths, filepaths_len, false);
-	FILE *file = current_file();
-	cr_expect_eq(file, stdin);
+    FILE *file = current_file();
+    cr_expect_eq(file, stdin);
 }
 
 Test(current_file, one_file)
@@ -472,101 +472,101 @@ Test(current_file, one_file)
     assert(t != NULL);
     fputs("bonjour", t);
     fclose(t);
-	char *filepaths[] = {template};
-	size_t filepaths_len = 1;
+    char  *filepaths[] = {template};
+    size_t filepaths_len = 1;
     exec_init(filepaths, filepaths_len, false);
-	FILE *file = current_file();
+    FILE *file = current_file();
     cr_expect(!feof(file));
-	cr_expect_eq(file, current_file());
+    cr_expect_eq(file, current_file());
     while (fgetc(file) != EOF)
         ;
     cr_expect(feof(file));
-	cr_expect_null(current_file());
+    cr_expect_null(current_file());
 }
 
 Test(current_file, two_file)
 {
-    char template1[] = "/tmp/sed_testXXXXXX";
+    char  template1[] = "/tmp/sed_testXXXXXX";
     FILE *t1 = fdopen(mkstemp(template1), "w");
     assert(t1 != NULL);
     fputs("bonjour", t1);
     fclose(t1);
 
-    char template2[] = "/tmp/sed_testXXXXXX";
+    char  template2[] = "/tmp/sed_testXXXXXX";
     FILE *t2 = fdopen(mkstemp(template2), "w");
     assert(t2 != NULL);
     fputs("bonjour", t2);
     fclose(t2);
 
-	char *filepaths[] = {template1, template2};
-	size_t filepaths_len = 2;
+    char  *filepaths[] = {template1, template2};
+    size_t filepaths_len = 2;
     exec_init(filepaths, filepaths_len, false);
 
-	FILE *file = current_file();
+    FILE *file = current_file();
     cr_expect(!feof(file));
-	cr_expect_eq(file, current_file());
+    cr_expect_eq(file, current_file());
     while (fgetc(file) != EOF)
         ;
     cr_expect(feof(file));
 
-	file = current_file();
-	cr_expect_not_null(file);
+    file = current_file();
+    cr_expect_not_null(file);
     cr_expect(!feof(file));
-	cr_expect_eq(file, current_file());
+    cr_expect_eq(file, current_file());
     while (fgetc(file) != EOF)
         ;
     cr_expect(feof(file));
 
-	cr_expect_null(current_file());
+    cr_expect_null(current_file());
 }
 
-Test(next_cycle, one_file_three_lines)
+Test(next_line, one_file_three_lines)
 {
     char template[] = "/tmp/sed_testXXXXXX";
     FILE *t = fdopen(mkstemp(template), "w");
     assert(t != NULL);
     fputs("a\nb\nc\n", t);
     fclose(t);
-	char *filepaths[] = {template};
-	size_t filepaths_len = 1;
+    char  *filepaths[] = {template};
+    size_t filepaths_len = 1;
     exec_init(filepaths, filepaths_len, false);
     char *line;
-    line = next_cycle();
+    line = next_line();
     cr_expect_str_eq(line, "a\n");
-    line = next_cycle();
+    line = next_line();
     cr_expect_str_eq(line, "b\n");
-    line = next_cycle();
+    line = next_line();
     cr_expect_str_eq(line, "c\n");
-    line = next_cycle();
+    line = next_line();
     cr_expect_null(line);
 }
 
-Test(next_cycle, two_file_four_lines)
+Test(next_line, two_file_four_lines)
 {
-    char template1[] = "/tmp/sed_testXXXXXX";
+    char  template1[] = "/tmp/sed_testXXXXXX";
     FILE *t1 = fdopen(mkstemp(template1), "w");
     assert(t1 != NULL);
     fputs("a\nb\n", t1);
     fclose(t1);
-    char template2[] = "/tmp/sed_testXXXXXX";
+    char  template2[] = "/tmp/sed_testXXXXXX";
     FILE *t2 = fdopen(mkstemp(template2), "w");
     assert(t2 != NULL);
     fputs("c\nd\n", t2);
     fclose(t2);
 
-	char *filepaths[] = {template1, template2};
-	size_t filepaths_len = 2;
+    char  *filepaths[] = {template1, template2};
+    size_t filepaths_len = 2;
     exec_init(filepaths, filepaths_len, false);
     char *line;
-    line = next_cycle();
+    line = next_line();
     cr_expect_str_eq(line, "a\n");
-    line = next_cycle();
+    line = next_line();
     cr_expect_str_eq(line, "b\n");
-    line = next_cycle();
+    line = next_line();
     cr_expect_str_eq(line, "c\n");
-    line = next_cycle();
+    line = next_line();
     cr_expect_str_eq(line, "d\n");
-    line = next_cycle();
+    line = next_line();
     cr_expect_null(line);
 }
 
@@ -577,8 +577,8 @@ Test(exec_command, next_no_auto_print)
     assert(t != NULL);
     fputs("a\nb\nc\nd\n", t);
     fclose(t);
-	char *filepaths[] = {template};
-	size_t filepaths_len = 1;
+    char  *filepaths[] = {template};
+    size_t filepaths_len = 1;
     exec_init(filepaths, filepaths_len, false);
 
     command.id = 'n';
@@ -599,8 +599,8 @@ Test(exec_command, next_auto_print)
     assert(t != NULL);
     fputs("a\nb\nc\nd\n", t);
     fclose(t);
-	char *filepaths[] = {template};
-	size_t filepaths_len = 1;
+    char  *filepaths[] = {template};
+    size_t filepaths_len = 1;
     exec_init(filepaths, filepaths_len, true);
 
     cr_redirect_stdout();
@@ -638,20 +638,91 @@ Test(exec_command, print_line_number)
     assert(t != NULL);
     fputs("a\nb\nc\nd\n", t);
     fclose(t);
-	char *filepaths[] = {template};
-	size_t filepaths_len = 1;
+    char  *filepaths[] = {template};
+    size_t filepaths_len = 1;
     exec_init(filepaths, filepaths_len, false);
 
     cr_redirect_stdout();
     command.id = '=';
-    next_cycle();
+    next_line();
     exec_command(&command);
-    next_cycle();
+    next_line();
     exec_command(&command);
-    next_cycle();
+    next_line();
     exec_command(&command);
-    next_cycle();
+    next_line();
     exec_command(&command);
     fflush(stdout);
     cr_expect_stdout_eq_str("1\n2\n3\n4\n");
+}
+
+static void
+exec_commands_setup()
+{
+    _debug_exec_set_pattern_space("foo");
+    _debug_exec_set_hold_space("bar");
+    _debug_exec_set_line_index(1);
+}
+
+Test(exec_commands, addresses_count_0, .init = exec_commands_setup)
+{
+    struct command commands[] = {
+        {.id = 'G', .addresses = {.count = 0}},
+        {.id = 'G', .addresses = {.count = 0}},
+        {.id = COMMAND_LAST},
+    };
+    exec_commands(commands);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "foo\nbar\nbar");
+}
+
+Test(exec_commands, addresses_line_count_1_all_match, .init = exec_commands_setup)
+{
+    struct command commands[] = {
+        {.id = 'G',
+         .addresses = {.count = 1, .addresses = {{ADDRESS_LINE, {.line = 1}}}}},
+        {.id = 'G',
+         .addresses = {.count = 1, .addresses = {{ADDRESS_LINE, {.line = 1}}}}},
+        {.id = COMMAND_LAST},
+    };
+    exec_commands(commands);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "foo\nbar\nbar");
+}
+
+Test(exec_commands, addresses_line_count_1_none_match, .init = exec_commands_setup)
+{
+    struct command commands[] = {
+        {.id = 'G',
+         .addresses = {.count = 1, .addresses = {{ADDRESS_LINE, {.line = 2}}}}},
+        {.id = 'G',
+         .addresses = {.count = 1, .addresses = {{ADDRESS_LINE, {.line = 3}}}}},
+        {.id = COMMAND_LAST},
+    };
+    exec_commands(commands);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "foo");
+}
+
+Test(exec_commands, addresses_line_count_1_some_match, .init = exec_commands_setup)
+{
+    struct command commands[] = {
+        {.id = 'G',
+         .addresses = {.count = 1, .addresses = {{ADDRESS_LINE, {.line = 2}}}}},
+        {.id = 'G',
+         .addresses = {.count = 1, .addresses = {{ADDRESS_LINE, {.line = 1}}}}},
+        {.id = COMMAND_LAST},
+    };
+    exec_commands(commands);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "foo\nbar");
+}
+
+Test(exec_commands, addresses_regex_count_1_some_match, .init = exec_commands_setup)
+{
+    struct command commands[] = {
+        {.id = 'G', .addresses = {.count = 1, .addresses = {{ADDRESS_RE}}}},
+        {.id = 'G', .addresses = {.count = 1, .addresses = {{ADDRESS_RE}}}},
+        {.id = COMMAND_LAST},
+    };
+    assert(regcomp(&commands[0].addresses.addresses[0].data.preg, "abc*", 0) == 0);
+    assert(regcomp(&commands[1].addresses.addresses[0].data.preg, "fo*", 0) == 0);
+    exec_commands(commands);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "foo\nbar");
 }

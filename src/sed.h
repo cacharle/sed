@@ -33,6 +33,7 @@ struct addresses
 {
     size_t         count;
     struct address addresses[2];
+    bool           in_range;
 };
 
 #define COMMAND_LAST -1

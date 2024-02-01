@@ -11,10 +11,11 @@ static char   hold_space_under[CHAR_SPACE_MAX + 1] = {'\0'};
 static char  *pattern_space = pattern_space_under;
 static char  *hold_space = hold_space_under;
 static size_t line_index = 0;
+static bool   last_line = false;
 static bool   auto_print = false;
 
 char *
-next_cycle(void);
+next_line(void);
 
 void
 exec_insert(union command_data *data)
@@ -194,13 +195,13 @@ exec_substitute(union command_data *data)
 
 static const char *reverse_available_escape = "\\\a\b\t\r\v\f";
 static const char  reverse_escape_lookup[] = {
-     ['\\'] = '\\',
-     ['\a'] = 'a',
-     ['\b'] = 'b',
-     ['\t'] = 't',
-     ['\r'] = 'r',
-     ['\v'] = 'v',
-     ['\f'] = 'f',
+    ['\\'] = '\\',
+    ['\a'] = 'a',
+    ['\b'] = 'b',
+    ['\t'] = 't',
+    ['\r'] = 'r',
+    ['\v'] = 'v',
+    ['\f'] = 'f',
 };
 
 static const size_t print_escape_line_wrap = 60;
@@ -240,7 +241,7 @@ exec_next(union command_data *data)
     (void)data;
     if (auto_print)
         fputs(pattern_space, stdout);
-    char *line = next_cycle();
+    char *line = next_line();
     if (line == NULL)
         exit(EXIT_SUCCESS);
     strcpy(pattern_space, line);
@@ -250,7 +251,7 @@ void
 exec_next_append(union command_data *data)
 {
     (void)data;
-    char *line = next_cycle();
+    char *line = next_line();
     if (line == NULL)
         exit(EXIT_SUCCESS);
     strcat(pattern_space, "\n");
@@ -282,9 +283,7 @@ exec_write(union command_data *data)
 {
     FILE *file = fopen(data->text, "a");
     if (file == NULL)
-        die("couldn't open file %s: %s",
-            data->text,
-            strerror(errno));
+        die("couldn't open file %s: %s", data->text, strerror(errno));
     fputs(pattern_space, file);
     fclose(file);
 }
@@ -327,13 +326,50 @@ exec_command(struct command *command)
     (exec_func_lookup[(size_t)command->id])(&command->data);
 }
 
-void
-exec_line(char *line, script_t commands)
+static bool
+address_match(struct command *command)
 {
-    for (size_t i = 0; commands[i].id != COMMAND_LAST; i++)
+    struct address *a = &command->addresses.addresses[0];
+    switch (a->type)
     {
-        exec_command(&commands[i]);
-        /* next_cycle(); */
+    case ADDRESS_LAST:
+        assert(0);
+    case ADDRESS_LINE:
+        if (line_index == a->data.line)
+            return true;
+        break;
+    case ADDRESS_RE:
+        if (regexec(&a->data.preg, pattern_space, 0, NULL, 0) == 0)
+            return true;
+    }
+    return false;
+}
+
+void
+exec_commands(script_t commands)
+{
+    for (struct command *command = commands; command->id != COMMAND_LAST; command++)
+    {
+        assert(command->addresses.count <= 2);
+        bool match = false;
+        switch (command->addresses.count)
+        {
+        case 0:
+            match = true;
+            break;
+        case 1:
+            match = address_match(command);
+            break;
+        case 2:
+            if (address_match(command))
+                command->addresses.in_range = !command->addresses.in_range;
+            match = command->addresses.in_range;
+            break;
+        default:
+            assert(0);
+        }
+        if (match)
+            exec_command(command);
     }
 }
 
@@ -358,8 +394,14 @@ void
 exec(script_t commands, char **local_filepaths, size_t local_filepaths_len)
 {
     exec_init(local_filepaths, local_filepaths_len, false);
-    // for command in commands
-    //     exec_command
+    char *line = NULL;
+    do
+    {
+        // TODO: next_line skipped sometimes with D
+        line = next_line();
+        strncpy(pattern_space, line, CHAR_SPACE_MAX);
+        exec_commands(commands);
+    } while (line != NULL);
 }
 
 FILE *
@@ -397,7 +439,7 @@ current_file(void)
 static const size_t line_size_init = 4098;
 
 char *
-next_cycle(void)
+next_line(void)
 {
     static size_t line_size = line_size_init;
     static char  *line = NULL;
@@ -413,8 +455,12 @@ next_cycle(void)
     ssize_t ret = getline(&line, &line_size, file);
     if (ret == -1 && errno != 0)
         die("error getline: %s", strerror(errno));
-    if (ret == -1) // eof (why no eof before getline call tho?)
-        return next_cycle();
+    if (ret == -1)  // eof (why no eof before getline call tho?)
+        return next_line();
+    // man feof says nonzero when EOF reached but last_line is a boolean and `true`
+    // aliases to 1 so I want to make sure that it is actually 1 by flipping twice
+    // `!!`
+    last_line = !!feof(file);
     line_index++;
     return line;
 }
@@ -428,7 +474,7 @@ struct file_lookup_entry
 };
 
 static struct file_lookup_entry file_lookup[FILE_LOOKUP_CAPACITY + 1] = {0};
-static size_t file_lookup_len = 0;
+static size_t                   file_lookup_len = 0;
 
 FILE *
 get_file(char *filepath)
@@ -440,14 +486,11 @@ get_file(char *filepath)
     }
     FILE *file = fopen(filepath, "a");
     if (file == NULL)
-        die("couldn't open file %s: %s",
-            filepath,
-            strerror(errno));
+        die("couldn't open file %s: %s", filepath, strerror(errno));
     file_lookup[file_lookup_len].filepath = xstrdup(filepath);
     file_lookup[file_lookup_len].file = file;
     file_lookup_len++;
     return file;
-
 }
 
 void
@@ -485,4 +528,10 @@ char *
 _debug_exec_set_hold_space(const char *content)
 {
     return strcpy(hold_space, content);
+}
+
+void
+_debug_exec_set_line_index(const size_t line_index_)
+{
+    line_index = line_index_;
 }
