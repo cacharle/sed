@@ -758,3 +758,126 @@ Test(exec_commands, addresses_regex_count_1_some_match, .init = exec_commands_se
     exec_commands(commands);
     cr_assert_str_eq(_debug_exec_pattern_space(), "foo\nbar");
 }
+
+Test(exec_commands, addresses_line_range, .init = exec_commands_setup)  // 2,5 p
+{
+    struct command commands[] = {
+        {'G',
+         .addresses = {2,
+                       {{ADDRESS_LINE, {.line = 2}}, {ADDRESS_LINE, {.line = 3}}},
+                       .in_range = false}},
+        {COMMAND_LAST},
+    };
+    exec_commands(commands);  // nothing happens
+    _debug_exec_set_line_index(2);
+    exec_commands(commands);  // executed
+    _debug_exec_set_line_index(3);
+    exec_commands(commands);  // executed
+    _debug_exec_set_line_index(4);
+    exec_commands(commands);  // nothing happens
+    cr_assert_str_eq(_debug_exec_pattern_space(), "foo\nbar\nbar");
+}
+
+Test(exec_commands, addresses_line_last_range, .init = exec_commands_setup)  // 3,$ p
+{
+    struct command commands[] = {
+        {'G',
+         .addresses = {2,
+                       {{ADDRESS_LINE, {.line = 2}}, {ADDRESS_LAST}},
+                       .in_range = false}},
+        {COMMAND_LAST},
+    };
+    exec_commands(commands);  // nothing happens
+    _debug_exec_set_line_index(2);
+    exec_commands(commands);  // executed
+    _debug_exec_set_line_index(3);
+    _debug_exec_set_last_line(true);
+    exec_commands(commands);  // executed
+    _debug_exec_set_line_index(4);
+    exec_commands(commands);  // nothing happens
+    cr_assert_str_eq(_debug_exec_pattern_space(), "foo\nbar\nbar");
+}
+
+Test(exec_commands,
+     addresses_line_reverse_range,
+     .init = exec_commands_setup)  // 2,1 p
+{
+    struct command commands[] = {
+        {'G',
+         .addresses = {2,
+                       {{ADDRESS_LINE, {.line = 2}}, {ADDRESS_LINE, {.line = 1}}},
+                       .in_range = false}},
+        {COMMAND_LAST},
+    };
+    exec_commands(commands);  // nothing happens
+    _debug_exec_set_line_index(2);
+    exec_commands(commands);  // executed
+    _debug_exec_set_line_index(3);
+    exec_commands(commands);  // nothing happens
+    cr_assert_str_eq(_debug_exec_pattern_space(), "foo\nbar");
+}
+
+Test(exec_commands,
+     addresses_line_last_reverse_range,
+     .init = exec_commands_setup)  // $,2 p
+{
+    struct command commands[] = {
+        {'G',
+         .addresses = {2,
+                       {{ADDRESS_LAST}, {ADDRESS_LINE, {.line = 2}}},
+                       .in_range = false}},
+        {COMMAND_LAST},
+    };
+    exec_commands(commands);  // nothing happens
+    _debug_exec_set_line_index(2);
+    exec_commands(commands);  // nothing happens
+    _debug_exec_set_line_index(3);
+    _debug_exec_set_last_line(true);
+    exec_commands(commands);  // executed
+    _debug_exec_set_line_index(1);
+    _debug_exec_set_last_line(false);
+    exec_commands(commands);  // nothing happens
+    cr_assert_str_eq(_debug_exec_pattern_space(), "foo\nbar");
+}
+
+Test(exec_commands, addresses_regex_range)  // /foo/,/bar/ p
+{
+    struct command commands[] = {
+        {'H', .addresses = {2, {{ADDRESS_RE}, {ADDRESS_RE}}, .in_range = false}},
+        {.id = COMMAND_LAST},
+    };
+    _debug_exec_set_hold_space("");
+    assert(regcomp(&commands[0].addresses.addresses[0].data.preg, "#fo*", 0) == 0);
+    assert(regcomp(&commands[0].addresses.addresses[1].data.preg, "#ba*", 0) == 0);
+    _debug_exec_set_pattern_space("asdfasdf");
+    exec_commands(commands);  // nothing happens
+    _debug_exec_set_pattern_space("#foo");
+    exec_commands(commands);  // executed
+    _debug_exec_set_pattern_space("HELLO");
+    exec_commands(commands);  // executed
+    _debug_exec_set_pattern_space("#bar");
+    exec_commands(commands);  // executed
+    _debug_exec_set_pattern_space("asdfasdf");
+    exec_commands(commands);  // nothing happens
+    cr_expect_str_eq(_debug_exec_hold_space(), "\n#foo\nHELLO\n#bar");
+}
+
+Test(exec_commands, addresses_same_line_range)  // 1,/foo/ p where line 1 == foo
+{
+    struct command commands[] = {
+        {'H',
+         .addresses = {2,
+                       {{ADDRESS_LINE, {.line = 1}}, {ADDRESS_RE}},
+                       .in_range = false}},
+        {.id = COMMAND_LAST},
+    };
+    _debug_exec_set_hold_space("");
+    assert(regcomp(&commands[0].addresses.addresses[1].data.preg, "#fo*", 0) == 0);
+    _debug_exec_set_line_index(1);
+    _debug_exec_set_pattern_space("#foo");
+    exec_commands(commands);  // executed
+    _debug_exec_set_line_index(2);
+    _debug_exec_set_pattern_space("asdf");
+    exec_commands(commands);  // nothing happens
+    cr_expect_str_eq(_debug_exec_hold_space(), "\n#foo");
+}

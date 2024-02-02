@@ -327,17 +327,16 @@ exec_command(struct command *command)
 }
 
 static bool
-address_match(struct command *command)
+address_match(struct address *address)
 {
-    struct address *a = &command->addresses.addresses[0];
-    switch (a->type)
+    switch (address->type)
     {
     case ADDRESS_LAST:
         return last_line;
     case ADDRESS_LINE:
-        return line_index == a->data.line;
+        return line_index == address->data.line;
     case ADDRESS_RE:
-        return regexec(&a->data.preg, pattern_space, 0, NULL, 0) == 0;
+        return regexec(&address->data.preg, pattern_space, 0, NULL, 0) == 0;
     }
     return false;
 }
@@ -355,12 +354,18 @@ exec_commands(script_t commands)
             match = true;
             break;
         case 1:
-            match = address_match(command);
+            match = address_match(&command->addresses.addresses[0]);
             break;
         case 2:
-            if (address_match(command))
-                command->addresses.in_range = !command->addresses.in_range;
+            if (address_match(&command->addresses.addresses[0]))
+                command->addresses.in_range = true;
             match = command->addresses.in_range;
+            if (address_match(&command->addresses.addresses[1]) ||
+                // Edge case when the second address line number is lower then the
+                // first one
+                (command->addresses.addresses[1].type == ADDRESS_LINE &&
+                 command->addresses.addresses[1].data.line <= line_index))
+                command->addresses.in_range = false;
             break;
         }
         if (match)
