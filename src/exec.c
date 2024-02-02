@@ -333,14 +333,11 @@ address_match(struct command *command)
     switch (a->type)
     {
     case ADDRESS_LAST:
-        assert(0);
+        return last_line;
     case ADDRESS_LINE:
-        if (line_index == a->data.line)
-            return true;
-        break;
+        return line_index == a->data.line;
     case ADDRESS_RE:
-        if (regexec(&a->data.preg, pattern_space, 0, NULL, 0) == 0)
-            return true;
+        return regexec(&a->data.preg, pattern_space, 0, NULL, 0) == 0;
     }
     return false;
 }
@@ -365,8 +362,6 @@ exec_commands(script_t commands)
                 command->addresses.in_range = !command->addresses.in_range;
             match = command->addresses.in_range;
             break;
-        default:
-            assert(0);
         }
         if (match)
             exec_command(command);
@@ -457,10 +452,10 @@ next_line(void)
         die("error getline: %s", strerror(errno));
     if (ret == -1)  // eof (why no eof before getline call tho?)
         return next_line();
-    // man feof says nonzero when EOF reached but last_line is a boolean and `true`
-    // aliases to 1 so I want to make sure that it is actually 1 by flipping twice
-    // `!!`
-    last_line = !!feof(file);
+    // Cannot check eof with feof, need to get next character and unget it.
+    int c = fgetc(file);
+    last_line = c == EOF;
+    ungetc(c, file);
     line_index++;
     return line;
 }
@@ -518,6 +513,12 @@ _debug_exec_hold_space(void)
     return hold_space;
 }
 
+bool
+_debug_exec_last_line(void)
+{
+    return last_line;
+}
+
 char *
 _debug_exec_set_pattern_space(const char *content)
 {
@@ -534,4 +535,10 @@ void
 _debug_exec_set_line_index(const size_t line_index_)
 {
     line_index = line_index_;
+}
+
+void
+_debug_exec_set_last_line(const bool last_line_)
+{
+    last_line = last_line_;
 }

@@ -6,15 +6,19 @@
 #include <errno.h>
 
 char *
+_debug_exec_pattern_space(void);
+char *
+_debug_exec_hold_space(void);
+bool
+_debug_exec_last_line(void);
+char *
 _debug_exec_set_pattern_space(const char *content);
 char *
 _debug_exec_set_hold_space(const char *content);
 void
-_debug_exec_set_line_index(const size_t line_index);
-char *
-_debug_exec_hold_space(void);
-char *
-_debug_exec_pattern_space(void);
+_debug_exec_set_line_index(const size_t line_index_);
+void
+_debug_exec_set_last_line(const bool last_line_);
 void
 exec_init(char **local_filepaths, size_t local_filepaths_len, bool auto_print_);
 FILE *
@@ -533,15 +537,17 @@ Test(next_line, one_file_three_lines)
     char *line;
     line = next_line();
     cr_expect_str_eq(line, "a\n");
+    cr_expect(!_debug_exec_last_line());
     line = next_line();
     cr_expect_str_eq(line, "b\n");
     line = next_line();
     cr_expect_str_eq(line, "c\n");
     line = next_line();
     cr_expect_null(line);
+    cr_expect(_debug_exec_last_line());
 }
 
-Test(next_line, two_file_four_lines)
+Test(next_line, two_files_four_lines)
 {
     char  template1[] = "/tmp/sed_testXXXXXX";
     FILE *t1 = fdopen(mkstemp(template1), "w");
@@ -560,14 +566,18 @@ Test(next_line, two_file_four_lines)
     char *line;
     line = next_line();
     cr_expect_str_eq(line, "a\n");
+    cr_expect(!_debug_exec_last_line());
     line = next_line();
     cr_expect_str_eq(line, "b\n");
+    cr_expect(_debug_exec_last_line());
     line = next_line();
+    cr_expect(!_debug_exec_last_line());
     cr_expect_str_eq(line, "c\n");
     line = next_line();
     cr_expect_str_eq(line, "d\n");
     line = next_line();
     cr_expect_null(line);
+    cr_expect(_debug_exec_last_line());
 }
 
 Test(exec_command, next_no_auto_print)
@@ -673,6 +683,28 @@ Test(exec_commands, addresses_count_0, .init = exec_commands_setup)
     };
     exec_commands(commands);
     cr_assert_str_eq(_debug_exec_pattern_space(), "foo\nbar\nbar");
+}
+
+Test(exec_commands, addresses_last_line_true, .init = exec_commands_setup)
+{
+    _debug_exec_set_last_line(true);
+    struct command commands[] = {
+        {.id = 'G', .addresses = {.count = 1, .addresses = {{ADDRESS_LAST}}}},
+        {.id = COMMAND_LAST},
+    };
+    exec_commands(commands);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "foo\nbar");
+}
+
+Test(exec_commands, addresses_last_line_false, .init = exec_commands_setup)
+{
+    _debug_exec_set_last_line(false);
+    struct command commands[] = {
+        {.id = 'G', .addresses = {.count = 1, .addresses = {{ADDRESS_LAST}}}},
+        {.id = COMMAND_LAST},
+    };
+    exec_commands(commands);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "foo");
 }
 
 Test(exec_commands, addresses_line_count_1_all_match, .init = exec_commands_setup)
