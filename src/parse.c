@@ -387,7 +387,7 @@ parse_command(char *s, struct command *command)
             command->id,
             command_info->addresses_max);
     s++;
-    skip_blank(&s);
+    // skip_blank(&s);
     return command_info->func(s, command);
 }
 

@@ -503,6 +503,9 @@ Test(parse_command, substitute)
     cr_expect_eq(regexec(&command.data.substitute.preg, "_abcccc", 0, NULL, 0), 0);
     cr_expect_eq(regexec(&command.data.substitute.preg, "abccc", 0, NULL, 0),
                  REG_NOMATCH);
+
+    // delimiter can be a space
+    rest = parse_command(strcpy(input, "s woo boing "), &command);
 }
 
 Test(parse_command, substitute_flags)

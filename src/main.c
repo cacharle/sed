@@ -30,6 +30,6 @@ main(int argc, char *argv[])
         script_string = argv[optind];
     }
     script_t script = parse(script_string);
-    exec(script, argv + optind, argc - optind);
+    exec(script, argv + optind, argc - optind, auto_print);
     return EXIT_SUCCESS;
 }

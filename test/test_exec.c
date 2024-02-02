@@ -881,3 +881,8 @@ Test(exec_commands, addresses_same_line_range)  // 1,/foo/ p where line 1 == foo
     exec_commands(commands);  // nothing happens
     cr_expect_str_eq(_debug_exec_hold_space(), "\n#foo");
 }
+
+Test(exec_commands, inverse)
+{
+    cr_skip();
+}

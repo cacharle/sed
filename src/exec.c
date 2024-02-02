@@ -391,17 +391,17 @@ exec_init(char **local_filepaths, size_t local_filepaths_len, bool auto_print_)
 }
 
 void
-exec(script_t commands, char **local_filepaths, size_t local_filepaths_len)
+exec(script_t commands, char **local_filepaths, size_t local_filepaths_len, bool auto_print_)
 {
-    exec_init(local_filepaths, local_filepaths_len, false);
-    char *line = NULL;
-    do
+    exec_init(local_filepaths, local_filepaths_len, auto_print_);
+    for (char *line = next_line(); line != NULL; line = next_line())
     {
         // TODO: next_line skipped sometimes with D
-        line = next_line();
         strncpy(pattern_space, line, CHAR_SPACE_MAX);
         exec_commands(commands);
-    } while (line != NULL);
+        if (auto_print)
+            fputs(pattern_space, stdout);
+    }
 }
 
 FILE *
@@ -425,8 +425,9 @@ current_file(void)
     }
     char *filepath = filepaths[filepaths_index];
     if (strcmp(filepath, "-") == 0)
-        return stdin;
-    file = fopen(filepath, "r");
+        file = stdin;
+    else
+        file = fopen(filepath, "r");
     if (file == NULL)
     {
         put_error("can't read %s: %s", filepath, strerror(errno));
@@ -457,8 +458,11 @@ next_line(void)
         die("error getline: %s", strerror(errno));
     if (ret == -1)  // eof (why no eof before getline call tho?)
         return next_line();
+        // return NULL;
     // Cannot check eof with feof, need to get next character and unget it.
     int c = fgetc(file);
+    // TODO: last_line should only refer the last line of the LAST file, not the last
+    // line of EVERY file
     last_line = c == EOF;
     ungetc(c, file);
     line_index++;

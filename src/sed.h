@@ -100,6 +100,6 @@ parse(char *s);
 void
 exec_command(struct command *command);
 void
-exec(script_t commands, char *local_filepaths[], size_t local_filepaths_len);
+exec(script_t commands, char *local_filepaths[], size_t local_filepaths_len, bool auto_print_);
 
 #endif
