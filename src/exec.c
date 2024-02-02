@@ -57,29 +57,29 @@ exec_delete_newline()
 void
 exec_replace_pattern_by_hold()
 {
-    strcpy(pattern_space, hold_space);
+    strncpy(pattern_space, hold_space, CHAR_SPACE_MAX);
 }
 
 void
 exec_append_pattern_by_hold()
 {
     char *pattern_space_end = pattern_space + strlen(pattern_space);
-    strcat(pattern_space_end, "\n");
-    strcat(pattern_space_end, hold_space);
+    strncat(pattern_space_end, "\n", CHAR_SPACE_MAX);
+    strncat(pattern_space_end, hold_space, CHAR_SPACE_MAX);
 }
 
 void
 exec_replace_hold_by_pattern()
 {
-    strcpy(hold_space, pattern_space);
+    strncpy(hold_space, pattern_space, CHAR_SPACE_MAX);
 }
 
 void
 exec_append_hold_by_pattern()
 {
     char *hold_space_end = hold_space + strlen(hold_space);
-    strcat(hold_space_end, "\n");
-    strcat(hold_space_end, pattern_space);
+    strncat(hold_space_end, "\n", CHAR_SPACE_MAX);
+    strncat(hold_space_end, pattern_space, CHAR_SPACE_MAX);
 }
 
 void
@@ -244,7 +244,7 @@ exec_next(union command_data *data)
     char *line = next_line();
     if (line == NULL)
         exit(EXIT_SUCCESS);
-    strcpy(pattern_space, line);
+    strncpy(pattern_space, line, CHAR_SPACE_MAX);
 }
 
 void
@@ -254,8 +254,8 @@ exec_next_append(union command_data *data)
     char *line = next_line();
     if (line == NULL)
         exit(EXIT_SUCCESS);
-    strcat(pattern_space, "\n");
-    strcat(pattern_space, line);
+    strncat(pattern_space, "\n", CHAR_SPACE_MAX);
+    strncat(pattern_space, line, CHAR_SPACE_MAX);
 }
 
 void
@@ -527,13 +527,13 @@ _debug_exec_last_line(void)
 char *
 _debug_exec_set_pattern_space(const char *content)
 {
-    return strcpy(pattern_space, content);
+    return strncpy(pattern_space, content, CHAR_SPACE_MAX);
 }
 
 char *
 _debug_exec_set_hold_space(const char *content)
 {
-    return strcpy(hold_space, content);
+    return strncpy(hold_space, content, CHAR_SPACE_MAX);
 }
 
 void
