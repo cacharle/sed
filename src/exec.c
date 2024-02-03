@@ -368,8 +368,15 @@ exec_commands(script_t commands)
                 command->addresses.in_range = false;
             break;
         }
+        if (command->inverse)
+            match = !match;
         if (match)
+        {
             exec_command(command);
+            // next_command = exec_command(command);
+            // if next_command == NULL then command++
+            // else command = next_command
+        }
     }
 }
 

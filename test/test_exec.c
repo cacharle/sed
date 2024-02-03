@@ -882,7 +882,34 @@ Test(exec_commands, addresses_same_line_range)  // 1,/foo/ p where line 1 == foo
     cr_expect_str_eq(_debug_exec_hold_space(), "\n#foo");
 }
 
-Test(exec_commands, inverse)
+Test(exec_commands, inverse_address_1, .init = exec_commands_setup)
 {
-    cr_skip();
+    struct command commands[] = {
+        {.id = 'G', .inverse = true,
+         .addresses = {.count = 1, .addresses = {{ADDRESS_LINE, {.line = 2}}}}},
+        {.id = 'G', .inverse = true,
+         .addresses = {.count = 1, .addresses = {{ADDRESS_LINE, {.line = 1}}}}},
+        {.id = 'G', .inverse = true,
+         .addresses = {.count = 1, .addresses = {{ADDRESS_LINE, {.line = 3}}}}},
+        {.id = COMMAND_LAST},
+    };
+    exec_commands(commands);
+    cr_assert_str_eq(_debug_exec_pattern_space(), "foo\nbar\nbar");
+}
+
+Test(exec_commands, inverse_addresses_line_range, .init = exec_commands_setup)  // 2,5 p
+{
+    struct command commands[] = {
+        {'G', .inverse = true,
+         .addresses = {2,
+                       {{ADDRESS_LINE, {.line = 2}}, {ADDRESS_LINE, {.line = 3}}},
+                       .in_range = false}},
+        {COMMAND_LAST},
+    };
+    exec_commands(commands);  // executed
+    _debug_exec_set_line_index(2);
+    exec_commands(commands);  // nothing happens
+    _debug_exec_set_line_index(3);
+    exec_commands(commands);  // nothing happens
+    cr_assert_str_eq(_debug_exec_pattern_space(), "foo\nbar");
 }
